@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.graduation.scrap.dao.ScrapDao">
+
+    <resultMap id="ScrapResult" type="edu.graduation.scrap.bean.Scrap">
+        <id column="id" property="id"/>
+        <result column="equipment_id" property="equipmentId"/>
+        <result column="asset_id" property="assetId"/>
+        <result column="equipment_name" property="equipmentName"/>
+        <result column="scrap_reason" property="scrapReason"/>
+        <result column="residual_value" property="residualValue"/>
+        <result column="apply_user_id" property="applyUserId"/>
+        <result column="apply_user_name" property="applyUserName"/>
+        <result column="approval_user_id" property="approvalUserId"/>
+        <result column="approval_user_name" property="approvalUserName"/>
+        <result column="approval_status" property="approvalStatus"/>
+        <result column="disposal_method" property="disposalMethod"/>
+        <result column="disposal_time" property="disposalTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="edu.graduation.scrap.bean.Scrap" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_equipment_scrap (equipment_id, equipment_name, scrap_reason, residual_value, apply_user_id, apply_user_name, approval_status)
+        VALUES (#{equipmentId}, #{equipmentName}, #{scrapReason}, #{residualValue}, #{applyUserId}, #{applyUserName}, COALESCE(#{approvalStatus}, 0))
+    </insert>
+
+    <select id="selectById" resultMap="ScrapResult">
+        SELECT * FROM lab_equipment_scrap WHERE id = #{id}
+    </select>
+
+    <select id="listPending" resultMap="ScrapResult">
+        SELECT * FROM lab_equipment_scrap WHERE approval_status = 0 ORDER BY create_time DESC
+    </select>
+
+    <select id="listAll" resultMap="ScrapResult">
+        SELECT * FROM lab_equipment_scrap ORDER BY create_time DESC
+    </select>
+
+    <update id="update" parameterType="edu.graduation.scrap.bean.Scrap">
+        UPDATE lab_equipment_scrap
+        <set>
+            <if test="approvalUserId != null">approval_user_id = #{approvalUserId},</if>
+            <if test="approvalStatus != null">approval_status = #{approvalStatus},</if>
+            <if test="disposalMethod != null">disposal_method = #{disposalMethod},</if>
+            <if test="disposalTime != null">disposal_time = #{disposalTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+</mapper>

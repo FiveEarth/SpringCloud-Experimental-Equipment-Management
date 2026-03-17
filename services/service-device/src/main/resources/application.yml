@@ -1,0 +1,79 @@
+server:
+  port: 8005
+spring:
+  profiles:
+    active: prod
+    include: feign
+  application:
+    name: service-device
+  cloud:
+    nacos:
+      server-addr: 47.104.250.164:8848
+      config:
+        namespace: ${spring.profiles.active:public}
+        import-check:
+          enabled: false
+    sentinel:
+      eager: true
+      transport:
+        dashboard: localhost:8080
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://47.104.250.164:3306/gra?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: gra
+    password: 123456
+    hikari:
+      max-lifetime: 120000
+      connection-timeout: 20000
+      idle-timeout: 60000
+      keepalive-time: 30000
+
+# MyBatis：指定 mapper XML 位置，否则找不到 DeviceDao.getDevices 等绑定
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+debug: false
+
+#打印日志
+#logging:
+#  level:
+    #edu.graduation.device.feign: debug
+
+
+
+
+#百度翻译
+#baidu:
+#  translate:
+#    appid: 20251229002529659
+#    secret: c8a1XTrGSPrqlVb9CLDj
+
+#切换配置文件
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=order
+      - nacos:database.properties?group=order
+    activate:
+      on-profile: dev
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=order
+      - nacos:database.properties?group=order
+      - nacos:haha.properties?group=order
+    activate:
+      on-profile: test
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=order
+      - nacos:database.properties?group=order
+      - nacos:hehe.properties?group=order
+    activate:
+      on-profile: prod

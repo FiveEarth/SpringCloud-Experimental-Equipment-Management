@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/services/service-reserve/src/main/resources/mapper/ReserveMapper.xml" value="1782e682-57ec-4637-b651-486cf4c4cf1c" />
+  </component>
+</project>

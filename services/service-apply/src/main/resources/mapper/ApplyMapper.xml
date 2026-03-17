@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="edu.graduation.apply.dao.ApplyDao">
+
+    <resultMap id="ApplyResultMap" type="edu.graduation.reserve.bean.Apply">
+        <id column="id" property="id"/>
+        <result column="reserve_id" property="reserve_id"/>
+        <result column="equipment_id" property="equipment_id"/>
+        <result column="asset_id" property="asset_id"/>
+        <result column="asset_code" property="asset_code"/>
+        <result column="equipment_name" property="equipment_name"/>
+        <result column="user_id" property="user_id"/>
+        <result column="user_name" property="user_name"/>
+        <result column="apply_type" property="apply_type"/>
+        <result column="apply_quantity" property="apply_quantity"/>
+        <result column="apply_time" property="apply_time"/>
+        <result column="use_time" property="use_time"/>
+        <result column="return_time" property="return_time"/>
+        <result column="purpose" property="purpose"/>
+        <result column="equipment_status" property="equipment_status"/>
+        <result column="approval_user_id" property="approve_user_id"/>
+        <result column="approval_user_name" property="approval_user_name"/>
+        <result column="approval_status" property="approve_status"/>
+        <result column="status_text" property="status_text"/>
+        <result column="approval_time" property="approve_time"/>
+        <result column="remarks" property="remarks"/>
+        <result column="return_status" property="return_status"/>
+        <result column="return_apply_time" property="return_apply_time"/>
+        <result column="status" property="status"/>
+        <result column="original_status" property="original_status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="edu.graduation.reserve.bean.Apply" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_equipment_apply
+        (equipment_id, asset_id, reserve_id, equipment_name, user_id, user_name, apply_type, apply_quantity, apply_time, use_time, return_time, purpose, equipment_status, approval_user_id, approval_status, remarks, return_status, return_apply_time)
+        VALUES
+        (#{equipment_id}, #{asset_id}, #{reserve_id}, #{equipment_name}, #{user_id}, #{user_name}, COALESCE(#{apply_type}, 0), COALESCE(#{apply_quantity}, 1), #{apply_time,jdbcType=TIMESTAMP}, #{use_time}, #{return_time}, COALESCE(#{purpose}, ''), #{equipment_status}, #{approve_user_id}, COALESCE(#{approve_status}, 0), #{remarks}, COALESCE(#{return_status}, 0), #{return_apply_time,jdbcType=TIMESTAMP})
+    </insert>
+
+    <select id="queryAllApply" resultMap="ApplyResultMap">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id
+    </select>
+
+    <select id="queryPending" resultMap="ApplyResultMap">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id WHERE ap.approval_status = 0 ORDER BY ap.id DESC
+    </select>
+
+    <select id="queryApplyByUserId" resultMap="ApplyResultMap" parameterType="long">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id WHERE ap.user_id = #{userId} AND (ap.status IS NULL OR ap.status != 4)
+    </select>
+
+    <select id="selectById" resultMap="ApplyResultMap">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id WHERE ap.id = #{id}
+    </select>
+
+    <select id="queryByTimeRange" resultMap="ApplyResultMap">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id
+        WHERE 1=1
+        <if test="equipmentId != null">AND ap.equipment_id = #{equipmentId}</if>
+        <if test="userId != null">AND ap.user_id = #{userId}</if>
+        <if test="startTime != null and startTime != ''">AND ap.apply_time &gt;= #{startTime}</if>
+        <if test="endTime != null and endTime != ''">AND ap.apply_time &lt;= #{endTime}</if>
+    </select>
+
+    <update id="modifyApply" parameterType="edu.graduation.reserve.bean.Apply">
+        UPDATE lab_equipment_apply
+        <set>
+            <if test="approve_status != null">approval_status = #{approve_status},</if>
+            <if test="approve_time != null">approval_time = #{approve_time},</if>
+            <if test="approve_user_id != null">approval_user_id = #{approve_user_id},</if>
+            <if test="approval_user_name != null">approval_user_name = #{approval_user_name},</if>
+            <if test="status_text != null">status_text = #{status_text},</if>
+            <if test="return_time != null">return_time = #{return_time},</if>
+            <if test="equipment_status != null">equipment_status = #{equipment_status},</if>
+            <if test="remarks != null">remarks = #{remarks},</if>
+            <if test="return_status != null">return_status = #{return_status},</if>
+            <if test="return_apply_time != null">return_apply_time = #{return_apply_time,jdbcType=TIMESTAMP},</if>
+            <if test="asset_id != null">asset_id = #{asset_id},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="original_status != null">original_status = #{original_status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="restoreApply">
+        UPDATE lab_equipment_apply SET status = original_status, original_status = NULL WHERE id = #{id} AND status = 4
+    </update>
+
+    <select id="queryPendingReturn" resultMap="ApplyResultMap">
+        SELECT ap.*, a.asset_code FROM lab_equipment_apply ap LEFT JOIN lab_equipment_asset a ON ap.asset_id = a.id WHERE ap.return_status = 1 ORDER BY ap.return_apply_time DESC
+    </select>
+
+    <delete id="deleteApply" parameterType="long">
+        DELETE FROM lab_equipment_apply WHERE id = #{id}
+    </delete>
+
+</mapper>

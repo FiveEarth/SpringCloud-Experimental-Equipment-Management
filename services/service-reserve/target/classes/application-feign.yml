@@ -1,0 +1,25 @@
+spring:
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            logger-level: full
+            connect-timeout: 1000
+            read-timeout: 2000
+          service-device:
+            logger-level: full
+            connect-timeout: 3000
+            read-timeout: 5000
+            #拦截器的局部生效配置
+#            request-interceptors:
+#              - edu.graduation.reserve.interceptor.XTokenRequestInterceptor
+#            retryer: feign.retryer.Default
+    sentinel:
+      transport:
+        dashboard: localhost:8080
+      eager: true
+      web-context-unify: false
+feign:
+  sentinel:
+    enabled: true

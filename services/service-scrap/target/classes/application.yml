@@ -1,0 +1,81 @@
+server:
+  port: 8006
+spring:
+  profiles:
+    active: prod
+    include: feign
+  application:
+    name: service-scrap
+  cloud:
+    nacos:
+      server-addr: 47.104.250.164:8848
+      config:
+        namespace: ${spring.profiles.active:public}
+        import-check:
+          enabled: true
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://47.104.250.164:3306/gra?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: gra
+    password: 123456
+    hikari:
+      max-lifetime: 120000
+      connection-timeout: 20000
+      idle-timeout: 60000
+      keepalive-time: 30000
+
+# MyBatis 核心配置（重点：解决 XML 找不到的问题）
+mybatis:
+  # 1. 指定 XML 映射文件的扫描路径（多个路径用逗号分隔）
+  # 路径规则：classpath: 开头 + XML 文件的包路径（/ 分隔） + /**/*.xml（扫描所有子目录的 XML）
+  mapper-locations: classpath:mapper/*.xml
+  # 2. 指定实体类的包名（可选，但推荐：自动给实体类生成别名，XML 中不用写全限定类名）
+  type-aliases-package: edu.graduation.scrap.model
+  # 3. 开启驼峰命名自动转换（可选，但实用：scrap 类的 equipmentId 对应数据库的 equipment_id）
+  configuration:
+    map-underscore-to-camel-case: true
+
+debug: true
+
+#打印日志
+logging:
+  level:
+    edu.graduation.scrap.feign: debug
+    edu.graduation.scrap.dao: DEBUG
+
+
+
+
+#百度翻译
+#baidu:
+#  translate:
+#    appid: 20251229002529659
+#    secret: c8a1XTrGSPrqlVb9CLDj
+
+#切换配置文件
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=scrap
+      - nacos:database.properties?group=scrap
+    activate:
+      on-profile: dev
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=scrap
+      - nacos:database.properties?group=scrap
+      - nacos:haha.properties?group=scrap
+    activate:
+      on-profile: test
+---
+spring:
+  config:
+    import:
+      - nacos:common.properties?group=scrap
+      - nacos:database.properties?group=scrap
+      - nacos:hehe.properties?group=scrap
+    activate:
+      on-profile: prod

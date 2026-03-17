@@ -1,0 +1,95 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: bing-route
+          uri: https://cn.bing.com
+          predicates:
+            - name: Path
+              args:
+                patterns: /search
+            - name: Query
+              args:
+                param: q
+                regexp: haha
+#            - Vip=user,li
+            - name: Vip
+              args:
+                param: user
+                value: li
+          order: 10
+          metadata:
+            hello: world
+
+
+        - id: order-route
+          uri: lb://service-order
+          predicates:
+            - name: Path
+              args:
+                patterns: /api/order/**
+                matchTrailingSlash: true
+          filters: #/api/order/ab/c -->  /ab/c
+            - RewritePath=/api/order/(?<segment>/?.*), /$\{segment}
+#            - AddResponseHeader=X-Request-qwe, 456
+          order: 1
+
+
+        - id: device-route
+          uri: lb://service-device
+          predicates:
+            - Path=/api/device/**
+          filters: #/api/device/ab/c -->  /ab/c
+            - RewritePath=/api/device/(?<segment>/?.*), /$\{segment}
+          order: 2
+
+        - id: apply-route
+          uri: lb://service-apply
+          predicates:
+            - Path=/api/apply/**
+          filters:
+            - RewritePath=/api/apply/(?<segment>/?.*), /$\{segment}
+          order: 3
+
+        - id: maintain-route
+          uri: lb://service-maintain
+          predicates:
+            - Path=/api/maintain/**
+          filters:
+            - RewritePath=/api/maintain/(?<segment>/?.*), /$\{segment}
+          order: 4
+
+        - id: reserve-route
+          uri: lb://service-reserve
+          predicates:
+            - Path=/api/reserve/**
+          filters:
+            - RewritePath=/api/reserve/(?<segment>/?.*), /$\{segment}
+          order: 5
+
+        - id: scrap-route
+          uri: lb://service-scrap
+          predicates:
+            - Path=/api/scrap/**
+          filters:
+            - RewritePath=/api/scrap/(?<segment>/?.*), /$\{segment}
+          order: 6
+
+        - id: user-route
+          uri: lb://service-user
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - RewritePath=/api/user/(?<segment>/?.*), /$\{segment}
+          order: 7
+
+        - id: lab-route
+          uri: lb://service-lab
+          predicates:
+            - Path=/api/lab/**
+          filters:
+            - RewritePath=/api/lab/(?<segment>/?.*), /$\{segment}
+          order: 8
+
+      default-filters:
+        - AddResponseHeader=X-Request-qwe, 456

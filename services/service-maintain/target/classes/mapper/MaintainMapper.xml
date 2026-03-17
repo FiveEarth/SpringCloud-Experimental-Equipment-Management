@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="edu.graduation.maintain.dao.MaintainDao">
+
+    <resultMap id="MaintainResult" type="edu.graduation.maintain.bean.Maintain">
+        <id column="id" property="id"/>
+        <result column="equipment_id" property="equipmentId"/>
+        <result column="asset_id" property="assetId"/>
+        <result column="equipment_name" property="equipmentName"/>
+        <result column="maintain_type" property="maintainType"/>
+        <result column="apply_user_id" property="applyUserId"/>
+        <result column="apply_user_name" property="applyUserName"/>
+        <result column="assign_user_id" property="assignUserId"/>
+        <result column="assign_user_name" property="assignUserName"/>
+        <result column="maintain_content" property="maintainContent"/>
+        <result column="maintain_time" property="maintainTime"/>
+        <result column="cost" property="cost"/>
+        <result column="progress_status" property="progressStatus"/>
+        <result column="original_status" property="originalStatus"/>
+        <result column="remind_cycle" property="remindCycle"/>
+        <result column="next_remind_time" property="nextRemindTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="edu.graduation.maintain.bean.Maintain" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_equipment_maintain
+        (equipment_id, asset_id, equipment_name, maintain_type, apply_user_id, apply_user_name, assign_user_id, assign_user_name, maintain_content, maintain_time, cost, progress_status, remind_cycle, next_remind_time)
+        VALUES
+        (#{equipmentId}, #{assetId}, #{equipmentName}, #{maintainType}, #{applyUserId}, #{applyUserName}, #{assignUserId}, #{assignUserName}, #{maintainContent}, #{maintainTime}, #{cost}, #{progressStatus}, #{remindCycle}, #{nextRemindTime})
+    </insert>
+
+    <select id="selectById" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain WHERE id = #{id}
+    </select>
+
+    <select id="queryAll" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain
+    </select>
+
+    <select id="queryByEquipmentId" resultMap="MaintainResult" parameterType="long">
+        SELECT * FROM lab_equipment_maintain WHERE equipment_id = #{equipmentId}
+    </select>
+
+    <select id="queryByApplyUserId" resultMap="MaintainResult" parameterType="long">
+        SELECT * FROM lab_equipment_maintain WHERE apply_user_id = #{applyUserId}
+    </select>
+
+    <select id="queryPending" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain WHERE progress_status = 0
+    </select>
+
+    <select id="queryPendingAndInProgress" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain WHERE progress_status IN (0, 1) ORDER BY progress_status ASC, create_time DESC
+    </select>
+
+    <select id="queryPendingOverdue24h" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain
+        WHERE progress_status = 0 AND create_time &lt; DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    </select>
+
+    <select id="queryByTimeRange" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain
+        WHERE 1=1
+        <if test="startTime != null and startTime != ''">AND create_time &gt;= #{startTime}</if>
+        <if test="endTime != null and endTime != ''">AND create_time &lt;= #{endTime}</if>
+        <if test="equipmentId != null">AND equipment_id = #{equipmentId}</if>
+        <if test="userId != null">AND apply_user_id = #{userId}</if>
+    </select>
+
+    <update id="modify" parameterType="edu.graduation.maintain.bean.Maintain">
+        UPDATE lab_equipment_maintain
+        <set>
+            <if test="assignUserId != null">assign_user_id = #{assignUserId},</if>
+            <if test="assignUserName != null">assign_user_name = #{assignUserName},</if>
+            <if test="maintainContent != null">maintain_content = #{maintainContent},</if>
+            <if test="maintainTime != null">maintain_time = #{maintainTime},</if>
+            <if test="cost != null">cost = #{cost},</if>
+            <if test="progressStatus != null">progress_status = #{progressStatus},</if>
+            <if test="originalStatus != null">original_status = #{originalStatus},</if>
+            <if test="remindCycle != null">remind_cycle = #{remindCycle},</if>
+            <if test="nextRemindTime != null">next_remind_time = #{nextRemindTime},</if>
+            <if test="assetId != null">asset_id = #{assetId},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="long">
+        DELETE FROM lab_equipment_maintain WHERE id = #{id}
+    </delete>
+
+    <update id="restoreMaintain">
+        UPDATE lab_equipment_maintain SET progress_status = original_status WHERE id = #{id} AND progress_status = 4 AND original_status IS NOT NULL
+    </update>
+
+</mapper>

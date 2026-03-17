@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--        src/main/java/edu/graduation/reserve/dao/ReserveDao.java-->
+<mapper namespace="edu.graduation.reserve.dao.ReserveDao">
+<!--插入预约设备订单-->
+    <insert id="insert" parameterType="edu.graduation.reserve.bean.Reserve" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_equipment_reserve (equipment_id, equipment_name, user_id, user_name, reserve_quantity, reserve_date, start_time, end_time, status, purpose, create_time, update_time)
+        VALUES (#{equipmentId}, #{equipmentName,jdbcType=VARCHAR}, #{userId}, #{userName,jdbcType=VARCHAR}, COALESCE(#{reserveQuantity}, 1), #{reserveDate}, #{startTime,jdbcType=TIMESTAMP}, #{endTime,jdbcType=TIMESTAMP}, COALESCE(#{status}, 0), #{purpose,jdbcType=VARCHAR}, NOW(), NOW())
+    </insert>
+    <!--修改订单信息-->
+    <update id="modifyReserve" parameterType="edu.graduation.reserve.bean.Reserve">
+        UPDATE lab_equipment_reserve
+        <set>
+            <if test="equipmentId != null and equipmentId > 0">equipment_id = #{equipmentId},</if>
+            <if test="userId != null and userId > 0">user_id = #{userId},</if>
+            <if test="reserveQuantity != null and reserveQuantity > 0">reserve_quantity = #{reserveQuantity},</if>
+            <if test="reserveDate != null">reserve_date = #{reserveDate},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="originalStatus != null">original_status = #{originalStatus},</if>
+            <if test="isUsed != null">is_used = #{isUsed},</if>
+            <if test="statusText != null">status_text = #{statusText},</if>
+            <if test="purpose != null">purpose = #{purpose,jdbcType=VARCHAR},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+    <update id="updateStatus">
+        UPDATE lab_equipment_reserve SET status = #{status}, update_time = NOW() WHERE id = #{id}
+    </update>
+    <update id="updateIsUsed">
+        UPDATE lab_equipment_reserve SET is_used = #{isUsed}, update_time = NOW() WHERE id = #{id}
+    </update>
+    <delete id="deleteReserve">
+        DELETE FROM lab_equipment_reserve WHERE id = #{id}
+    </delete>
+    <resultMap id="ReserveResult" type="edu.graduation.reserve.bean.Reserve">
+        <id column="id" property="id"/>
+        <result column="equipment_id" property="equipmentId"/>
+        <result column="equipment_name" property="equipmentName"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="reserve_quantity" property="reserveQuantity"/>
+        <result column="reserve_date" property="reserveDate"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="status" property="status"/>
+        <result column="status_text" property="statusText"/>
+        <result column="purpose" property="purpose"/>
+        <result column="is_used" property="isUsed"/>
+        <result column="original_status" property="originalStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="ReserveResult">
+        SELECT * FROM lab_equipment_reserve WHERE id = #{id}
+    </select>
+
+    <select id="queryReserveByUserId" resultMap="ReserveResult">
+        SELECT * FROM lab_equipment_reserve WHERE user_id = #{userId}
+    </select>
+    <select id="queryAllReserve" resultMap="ReserveResult">
+        SELECT * FROM lab_equipment_reserve ORDER BY create_time DESC
+    </select>
+
+    <select id="queryByTimeRange" resultMap="ReserveResult">
+        SELECT * FROM lab_equipment_reserve
+        WHERE 1=1
+        <if test="equipmentId != null">AND equipment_id = #{equipmentId}</if>
+        <if test="userId != null">AND user_id = #{userId}</if>
+        <if test="startTime != null and startTime != ''">AND create_time &gt;= #{startTime}</if>
+        <if test="endTime != null and endTime != ''">AND create_time &lt;= #{endTime}</if>
+        ORDER BY create_time DESC
+    </select>
+</mapper>

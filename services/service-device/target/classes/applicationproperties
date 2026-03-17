@@ -1,0 +1,10 @@
+spring.application.name=service-device
+server.port=9000
+spring.cloud.nacos.server-addr=47.104.250.164:8848
+# 标记Nacos配置为可选（不存在也不报错）
+spring.config.import=optional:nacos:
+#禁用nacos配置文件检查
+spring.cloud.nacos.config.import-check.enabled=false
+
+spring.cloud.sentinel.transport.dashboard=localhost:8080
+spring.cloud.sentinel.eager=true

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.graduation.device.dao.DeviceDao">
+
+    <select id="getDevices" resultType="edu.graduation.device.bean.Device">
+        SELECT id AS deviceId, equipment_code AS equipmentCode, equipment_name AS deviceName,
+               model, lab_id AS labId, lab_name AS labName, purchase_date AS purchaseDate,
+               specification, manual_url AS manualUrl, status, status_text AS statusText,
+               COALESCE(count, 0) AS count, COALESCE(count, 0) AS totalCount, residual_value AS residualValue
+        FROM lab_equipment
+    </select>
+
+    <select id="getDevicesBorrowable" resultType="edu.graduation.device.bean.Device">
+        SELECT e.id AS deviceId, e.equipment_code AS equipmentCode, e.equipment_name AS deviceName,
+               e.model, e.lab_id AS labId, e.lab_name AS labName, e.purchase_date AS purchaseDate,
+               e.specification, e.manual_url AS manualUrl, e.status, e.status_text AS statusText,
+               (SELECT COUNT(*) FROM lab_equipment_asset a WHERE a.equipment_id = e.id AND a.status = 0) AS count,
+               COALESCE(e.count, 0) AS totalCount,
+               e.residual_value AS residualValue
+        FROM lab_equipment e
+        WHERE EXISTS (SELECT 1 FROM lab_equipment_asset a WHERE a.equipment_id = e.id AND a.status = 0)
+    </select>
+
+    <insert id="insertOne" parameterType="edu.graduation.reserve.bean.Equipment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_equipment (equipment_code, equipment_name, model, lab_id, lab_name, purchase_date, specification, manual_url, status, status_text, count)
+        VALUES (#{equipment_code}, #{equipment_name}, #{model}, #{lab_id}, #{lab_name,jdbcType=VARCHAR},
+                #{purchase_date,jdbcType=DATE}, #{specification,jdbcType=VARCHAR}, #{manual_url,jdbcType=VARCHAR},
+                COALESCE(#{status,jdbcType=INTEGER}, 0), CASE COALESCE(#{status,jdbcType=INTEGER}, 0) WHEN 0 THEN '在库' WHEN 1 THEN '领用中' WHEN 2 THEN '故障待修' WHEN 3 THEN '已报废' ELSE '在库' END,
+                COALESCE(#{count,jdbcType=INTEGER}, 1))
+    </insert>
+
+    <insert id="insertEquipmentBatch" parameterType="java.util.List">
+        INSERT INTO lab_equipment (equipment_code, equipment_name, model, lab_id, lab_name, purchase_date, specification, manual_url, status, status_text, count)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.equipment_code}, #{item.equipment_name}, #{item.model}, #{item.lab_id}, #{item.lab_name,jdbcType=VARCHAR},
+             #{item.purchase_date,jdbcType=DATE}, #{item.specification}, #{item.manual_url,jdbcType=VARCHAR},
+             #{item.status,jdbcType=INTEGER}, #{item.status_text,jdbcType=VARCHAR}, #{item.count,jdbcType=INTEGER})
+        </foreach>
+    </insert>
+
+    <delete id="deleteEquipmentBatch" parameterType="java.util.List">
+        DELETE FROM lab_equipment
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectCountById" resultType="java.lang.Integer">
+        SELECT COALESCE(count, 0) FROM lab_equipment WHERE id = #{id}
+    </select>
+
+    <update id="updateEquipmentStatus">
+        UPDATE lab_equipment
+        SET status = #{status},
+            status_text = CASE #{status} WHEN 0 THEN '在库' WHEN 1 THEN '领用中' WHEN 2 THEN '故障待修' WHEN 3 THEN '已报废' ELSE status_text END
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateCount">
+        UPDATE lab_equipment
+        SET count = GREATEST(0, COALESCE(count, 0) + #{delta})
+        WHERE id = #{id}
+    </update>
+
+    <select id="countAssetInUseByEquipmentIds" resultType="int">
+        SELECT COUNT(*) FROM lab_equipment_asset
+        WHERE equipment_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND status = 1
+    </select>
+
+    <select id="countUnreturnedApplyByEquipmentIds" resultType="int">
+        SELECT COUNT(*) FROM lab_equipment_apply
+        WHERE equipment_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND approval_status = 1 AND (return_status IS NULL OR return_status != 2)
+    </select>
+
+    <select id="countUnfinishedMaintainByEquipmentIds" resultType="int">
+        SELECT COUNT(*) FROM lab_equipment_maintain
+        WHERE equipment_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND progress_status IN (0, 1)
+    </select>
+
+    <update id="updateEquipment">
+        UPDATE lab_equipment
+        <set>
+            <if test="equipmentCode != null">equipment_code = #{equipmentCode},</if>
+            <if test="deviceName != null">equipment_name = #{deviceName},</if>
+            <if test="model != null">model = #{model},</if>
+            <if test="labId != null">lab_id = #{labId},</if>
+            <if test="labName != null">lab_name = #{labName},</if>
+            <if test="purchaseDate != null">purchase_date = #{purchaseDate},</if>
+            <if test="specification != null">specification = #{specification},</if>
+            <if test="manualUrl != null">manual_url = #{manualUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="statusText != null">status_text = #{statusText},</if>
+            <if test="count != null">count = #{count},</if>
+            <if test="residualValue != null">residual_value = #{residualValue},</if>
+        </set>
+        WHERE id = #{deviceId}
+    </update>
+
+</mapper>
