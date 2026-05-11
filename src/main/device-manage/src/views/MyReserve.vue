@@ -17,7 +17,7 @@
     </div>
     <el-card class="list-card" shadow="hover">
       <div class="table-wrap">
-      <el-table :data="filteredList" class="page-table table-hover-actions" border style="width: 100%" empty-text="暂无预约记录">
+      <el-table :data="filteredList" class="page-table" border style="width: 100%" empty-text="暂无预约记录">
       <el-table-column prop="equipmentName" label="设备名称" width="140" show-overflow-tooltip />
       <el-table-column prop="reserveQuantity" label="数量" width="72" align="center">
         <template #default="{ row }">{{ row.reserveQuantity != null ? row.reserveQuantity : 1 }}</template>
@@ -430,11 +430,6 @@ export default {
 .table-wrap { margin-top: 0; }
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: var(--el-table-row-hover-bg-color, #f5f7fa); }
-/* .table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 1;
-  transition: opacity 0.2s;
-} */
-/* .table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) { opacity: 1; } */
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }
 .form-tip { margin-left: 8px; color: #909399; font-size: 12px; }

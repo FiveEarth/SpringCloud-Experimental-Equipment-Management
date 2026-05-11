@@ -34,5 +34,13 @@ public class LabServiceImpl implements LabService {
         }
         labDao.deleteBatch(ids);
     }
+
+    @Override
+    public void updateLab(Lab lab) {
+        if (lab == null || lab.getId() == null) {
+            return;
+        }
+        labDao.updateOne(lab);
+    }
 }
 

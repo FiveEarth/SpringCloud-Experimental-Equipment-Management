@@ -35,8 +35,12 @@ public class MaintainController {
     }
 
     @GetMapping("/maintains")
-    @Operation(summary = "查询所有维护/维修记录")
-    public ResponseEntity<Result<List<Maintain>>> getAllMaintains() {
+    @Operation(summary = "查询所有维护/维修记录（含用户软隐藏）", description = "仅管理员、教师")
+    public ResponseEntity<Result<List<Maintain>>> getAllMaintains(
+            @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!isAdminOrTeacher(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "无权限"));
+        }
         try {
             List<Maintain> list = maintainService.queryAll();
             return ResponseEntity.ok(Result.success("查询所有维护记录成功", list));
@@ -48,7 +52,12 @@ public class MaintainController {
 
     @GetMapping("/maintains/equipment/{equipmentId}")
     @Operation(summary = "根据设备ID查询维护/维修记录")
-    public ResponseEntity<Result<List<Maintain>>> getMaintainsByEquipmentId(@PathVariable("equipmentId") Long equipmentId) {
+    public ResponseEntity<Result<List<Maintain>>> getMaintainsByEquipmentId(
+            @PathVariable("equipmentId") Long equipmentId,
+            @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!isAdminOrTeacher(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "无权限"));
+        }
         try {
             List<Maintain> list = maintainService.queryByEquipmentId(equipmentId);
             return ResponseEntity.ok(Result.success("查询设备维护记录成功", list));
@@ -60,7 +69,14 @@ public class MaintainController {
 
     @GetMapping("/maintains/user/{userId}")
     @Operation(summary = "根据申请人ID查询维护/维修记录")
-    public ResponseEntity<Result<List<Maintain>>> getMaintainsByApplyUser(@PathVariable("userId") Long userId) {
+    public ResponseEntity<Result<List<Maintain>>> getMaintainsByApplyUser(
+            @PathVariable("userId") Long userId,
+            @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
+            @RequestHeader(value = "X-Roles", required = false) String roles) {
+        long self = parseUserId(userIdStr);
+        if (!isAdminOrTeacher(roles) && (self <= 0 || self != userId)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "无权限"));
+        }
         try {
             List<Maintain> list = maintainService.queryByApplyUserId(userId);
             return ResponseEntity.ok(Result.success("查询用户维护记录成功", list));
@@ -70,9 +86,57 @@ public class MaintainController {
         }
     }
 
+    @GetMapping("/maintains/mine")
+    @Operation(summary = "当前登录用户提交的维修/维护记录", description = "供学生「维修申请」页使用，依据 X-User-Id")
+    public ResponseEntity<Result<List<Maintain>>> myMaintains(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdStr) {
+        long uid = parseUserId(userIdStr);
+        if (uid <= 0) {
+            return ResponseEntity.badRequest().body(Result.paramFail("缺少用户身份"));
+        }
+        List<Maintain> list = maintainService.queryByApplyUserIdVisible(uid);
+        return ResponseEntity.ok(Result.success("查询成功", list));
+    }
+
+    @PostMapping("/maintain/{id}/applicant-revoke")
+    @Operation(summary = "申请人撤销维修单", description = "仅待处理且未接单；软隐藏并恢复实例为在库")
+    public ResponseEntity<Result<Void>> applicantRevoke(@PathVariable("id") Long id,
+                                                        @RequestHeader(value = "X-User-Id", required = false) String userIdStr) {
+        long uid = parseUserId(userIdStr);
+        if (uid <= 0) {
+            return ResponseEntity.badRequest().body(Result.paramFail("缺少用户身份"));
+        }
+        try {
+            maintainService.applicantRevokePending(id, uid);
+            return ResponseEntity.ok(Result.success("已撤销", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Result.paramFail(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/maintain/{id}/applicant-soft-hide")
+    @Operation(summary = "申请人隐藏已完成维修单", description = "软隐藏，管理员/教师仍可见")
+    public ResponseEntity<Result<Void>> applicantSoftHide(@PathVariable("id") Long id,
+                                                          @RequestHeader(value = "X-User-Id", required = false) String userIdStr) {
+        long uid = parseUserId(userIdStr);
+        if (uid <= 0) {
+            return ResponseEntity.badRequest().body(Result.paramFail("缺少用户身份"));
+        }
+        try {
+            maintainService.applicantSoftHideCompleted(id, uid);
+            return ResponseEntity.ok(Result.success("已从我的列表隐藏", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Result.paramFail(e.getMessage()));
+        }
+    }
+
     @PutMapping("/maintain/restore/{id}")
-    @Operation(summary = "恢复软删除的维修记录")
-    public ResponseEntity<Result<String>> restoreMaintain(@PathVariable("id") Long id) {
+    @Operation(summary = "恢复用户软隐藏的维修记录", description = "管理员、教师")
+    public ResponseEntity<Result<String>> restoreMaintain(@PathVariable("id") Long id,
+                                                          @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!isAdminOrTeacher(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "无权限"));
+        }
         try {
             maintainService.restoreMaintain(id);
             return ResponseEntity.ok(Result.success("已恢复"));
@@ -106,7 +170,7 @@ public class MaintainController {
     }
 
     @GetMapping("/maintains/repairer")
-    @Operation(summary = "维修员工作列表", description = "待处理+进行中，用于接单与完成")
+    @Operation(summary = "维修员工作列表", description = "待处理+进行中+已完成+已隐藏，用于维修员列表筛选展示")
     public ResponseEntity<Result<List<Maintain>>> getRepairerList() {
         List<Maintain> list = maintainService.queryPendingAndInProgress();
         return ResponseEntity.ok(Result.success("查询成功", list));
@@ -134,7 +198,11 @@ public class MaintainController {
             @RequestParam(required = false) Long equipmentId,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String startTime,
-            @RequestParam(required = false) String endTime) {
+            @RequestParam(required = false) String endTime,
+            @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!isAdminOrTeacher(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "无权限"));
+        }
         List<Maintain> list = maintainService.queryAudit(equipmentId, userId, startTime, endTime);
         return ResponseEntity.ok(Result.success("查询成功", list));
     }
@@ -160,11 +228,15 @@ public class MaintainController {
     }
 
     @DeleteMapping("/maintain/{id}")
-    @Operation(summary = "删除维护/维修记录")
-    public ResponseEntity<Result<Void>> deleteMaintain(@PathVariable("id") Long id) {
+    @Operation(summary = "物理删除维修记录", description = "仅系统管理员")
+    public ResponseEntity<Result<Void>> deleteMaintain(@PathVariable("id") Long id,
+                                                       @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!isAdmin(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "仅管理员可彻底删除"));
+        }
         try {
             maintainService.deleteMaintain(id);
-            return ResponseEntity.ok(Result.success("删除维护记录成功", null));
+            return ResponseEntity.ok(Result.success("已彻底删除", null));
         } catch (Exception e) {
             log.error("删除维护记录失败", e);
             return ResponseEntity.status(500).body(Result.fail(e.getMessage()));
@@ -186,8 +258,15 @@ public class MaintainController {
             if (c instanceof Number) cost = java.math.BigDecimal.valueOf(((Number) c).doubleValue());
         }
         String maintainContent = body != null && body.get("maintainContent") != null ? body.get("maintainContent").toString() : null;
+        java.math.BigDecimal scrapResidualValue = null;
+        if (body != null && body.get("residualValue") != null) {
+            Object rv = body.get("residualValue");
+            if (rv instanceof Number) {
+                scrapResidualValue = java.math.BigDecimal.valueOf(((Number) rv).doubleValue());
+            }
+        }
         try {
-            maintainService.completeRepair(id, success, cost, maintainContent);
+            maintainService.completeRepair(id, success, cost, maintainContent, scrapResidualValue);
             return ResponseEntity.ok(Result.success(Boolean.TRUE.equals(success) ? "维修完成，设备已恢复" : "已转报废申请", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Result.paramFail(e.getMessage()));
@@ -201,5 +280,13 @@ public class MaintainController {
         } catch (NumberFormatException e) {
             return 0L;
         }
+    }
+
+    private static boolean isAdmin(String roles) {
+        return roles != null && roles.contains("ADMIN");
+    }
+
+    private static boolean isAdminOrTeacher(String roles) {
+        return roles != null && (roles.contains("ADMIN") || roles.contains("TEACHER"));
     }
 }

@@ -11,7 +11,7 @@
  Target Server Version : 50744 (5.7.44-log)
  File Encoding         : 65001
 
- Date: 12/03/2026 16:39:00
+ Date: 28/03/2026 18:49:30
 */
 
 SET NAMES utf8mb4;
@@ -43,12 +43,20 @@ CREATE TABLE `lab_equipment`  (
   INDEX `idx_equipment_status`(`status`) USING BTREE COMMENT '设备状态索引（筛选设备用）',
   INDEX `idx_equipment_name`(`equipment_name`) USING BTREE COMMENT '设备名称索引（模糊搜索用）',
   CONSTRAINT `fk_equipment_lab` FOREIGN KEY (`lab_id`) REFERENCES `lab_laboratory` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备信息表（核心业务表）：实验室删除受限（需先转移/删除设备）' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备信息表（核心业务表）：实验室删除受限（需先转移/删除设备）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of lab_equipment
 -- ----------------------------
-INSERT INTO `lab_equipment` VALUES (1, 'EQ-20260311', '测试设备1', '测试型号1', 4, '测试添加', 8, '2026-03-11', '测试参数1', NULL, 0, '在库', NULL, '2026-03-11 17:58:26', '2026-03-12 15:40:06');
+INSERT INTO `lab_equipment` VALUES (1, 'EQ-20260311', '笔记本电脑', '天选3', 3, '计算机实验室303', 7, '2026-03-11', '12th Gen Intel(R) Core(TM) i7-12700H   2.30 GHz', '', 0, '在库', NULL, '2026-03-11 17:58:26', '2026-03-27 15:21:43');
+INSERT INTO `lab_equipment` VALUES (2, 'EQ-20230327', '电子分析天平', 'FA2004', 1, '物理实验室101', 9, '2026-03-27', '量程:0~200g', NULL, 0, '在库', NULL, '2026-03-27 08:30:57', '2026-03-27 18:04:08');
+INSERT INTO `lab_equipment` VALUES (3, 'EQ-2026001', '超声波清洗机', 'PS-40A', 2, '化学实验室202', 10, '2026-03-27', '功率180W', NULL, 0, '在库', NULL, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment` VALUES (4, 'EQ-2026002', '台式高速离心机', 'TG16-WS', 2, '化学实验室202', 15, '2026-03-27', '最高转速16000r/min', NULL, 0, '在库', NULL, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment` VALUES (5, 'EQ-2026003', '恒温水浴锅', 'HH-S4', 2, '化学实验室202', 20, '2026-03-27', '控温范围:0°C~100°C', NULL, 0, '在库', NULL, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment` VALUES (6, 'EQ-2026004', '气垫导轨', 'L-QGD-1', 1, '物理实验室101', 15, '2026-03-27', '1.2m，配光电门', NULL, 0, '在库', NULL, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment` VALUES (7, 'EQ-2026005', '单摆仪', 'J-LD-1', 1, '物理实验室101', 15, '2026-03-27', '摆长 0.5-1m，周期 0.1s', NULL, 0, '在库', NULL, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment` VALUES (8, 'EQ-2026006', '嵌入式开发板', 'STM32F103', 3, '计算机实验室303', 20, '2026-03-27', 'Cortex-M3，72MHz', NULL, 0, '在库', NULL, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment` VALUES (9, 'EQ-2026007', '路由器', 'Cisco ISR 4321', 3, '计算机实验室303', 10, '2026-03-27', '2×GE，支持 VPN', NULL, 0, '在库', NULL, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
 
 -- ----------------------------
 -- Table structure for lab_equipment_apply
@@ -77,6 +85,7 @@ CREATE TABLE `lab_equipment_apply`  (
   `remarks` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注（如故障描述）',
   `return_status` tinyint(4) NOT NULL DEFAULT 0 COMMENT '归还状态（0-未申请归还 1-待归还审批 2-已归还）',
   `return_apply_time` datetime NULL DEFAULT NULL COMMENT '学生申请归还时间',
+  `status` tinyint(4) NULL DEFAULT NULL COMMENT '记录状态（4-软删除/已隐藏）',
   `original_status` tinyint(4) NULL DEFAULT NULL COMMENT '学生点击删除前记录的状态',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_equipment_id`(`equipment_id`) USING BTREE COMMENT '设备ID索引（查询设备领用记录）',
@@ -92,26 +101,28 @@ CREATE TABLE `lab_equipment_apply`  (
   CONSTRAINT `fk_apply_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_apply_reserve` FOREIGN KEY (`reserve_id`) REFERENCES `lab_equipment_reserve` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `fk_apply_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备领用归还表：设备删除受限（需先完结领用记录）；用户删除时，关联记录同步删除；审批人删除时，审批人ID设为NULL' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备领用归还表：设备删除受限（需先完结领用记录）；用户删除时，关联记录同步删除；审批人删除时，审批人ID设为NULL' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of lab_equipment_apply
 -- ----------------------------
-INSERT INTO `lab_equipment_apply` VALUES (16, 1, 19, 2, '电子天平', 3, 'student01', 0, 1, '2026-03-09 02:10:10', '2026-03-09 02:10:10', '2026-03-09 09:31:52', '', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:31:36', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (18, 8, 37, 3, '测试', 3, 'student01', 0, 1, '2026-03-09 02:22:24', '2026-03-09 02:22:24', '2026-03-09 09:31:49', '', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:31:40', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (20, 6, 6, 4, '工业平板电脑', 3, 'student01', 0, 1, '2026-03-09 09:37:57', '2026-03-09 09:37:57', '2026-03-09 09:38:36', '测试预约使用', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:38:11', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (21, 9, 42, 5, '测试设备', 3, 'student01', 0, 1, '2026-03-09 11:16:09', '2026-03-09 11:16:09', '2026-03-09 17:17:12', '测试用途', 1, NULL, '张老师', 1, NULL, NULL, '测试驳回归还', 2, '2026-03-09 17:17:01', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (22, 6, 12, 6, '工业平板电脑', 7, 'student04', 0, 1, '2026-03-09 17:09:28', '2026-03-09 17:09:28', '2026-03-09 17:15:23', '测试student04工业平板电脑', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 17:14:34', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (23, 6, 12, 8, '工业平板电脑', 7, 'student04', 0, 1, '2026-03-10 09:03:45', '2026-03-10 09:03:45', '2026-03-11 00:37:10', '测试撤销', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:35:16', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (24, 6, NULL, 11, '工业平板电脑', 7, 'student04', 0, 4, '2026-03-11 00:26:34', '2026-03-11 00:26:34', '2026-03-11 00:37:03', '测试用户04预约4台电脑', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:40', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (25, 8, NULL, 12, '测试', 7, 'student04', 0, 2, '2026-03-11 00:28:00', '2026-03-11 00:28:00', '2026-03-11 00:37:05', '测试跳转', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:39', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (26, 9, 43, 13, '测试设备', 7, 'student04', 0, 1, '2026-03-11 00:34:37', '2026-03-11 00:34:37', '2026-03-11 00:37:07', '测试跳转', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:38', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (27, 8, 37, 14, '测试', 7, 'student04', 0, 1, '2026-03-11 00:35:58', '2026-03-11 00:35:58', '2026-03-11 00:37:08', '', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:19', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (28, 6, NULL, 10, '工业平板电脑', 3, 'student01', 0, 4, '2026-03-11 09:22:53', '2026-03-11 09:22:53', '2026-03-11 09:23:13', '测试4台电脑', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 09:23:05', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (29, 1, NULL, 9, '电子天平', 3, 'student01', 0, 2, '2026-03-11 14:33:01', '2026-03-11 14:33:01', '2026-03-11 16:40:29', '测试电子天平2/5', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 16:15:40', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (30, 8, NULL, 15, '测试', 3, 'student01', 0, 4, '2026-03-11 17:19:42', '2026-03-11 17:19:42', '2026-03-11 17:22:47', '测试报废显示555', 1, NULL, '系统管理员', 1, NULL, NULL, '', 2, '2026-03-11 17:22:29', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (31, 6, 12, 16, '工业平板电脑', 3, 'student01', 0, 1, '2026-03-11 17:53:56', '2026-03-11 17:53:56', '2026-03-11 17:54:26', '测试zdzdzd', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 17:54:14', NULL);
-INSERT INTO `lab_equipment_apply` VALUES (32, 1, 24, 17, '测试设备1', 3, 'student01', 0, 1, '2026-03-12 15:38:34', '2026-03-12 15:38:34', NULL, '测试设备的预约用途', NULL, NULL, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (16, 1, 19, 2, '电子天平', 3, 'student01', 0, 1, '2026-03-09 02:10:10', '2026-03-09 02:10:10', '2026-03-09 09:31:52', '', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:31:36', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (18, 8, 37, 3, '测试', 3, 'student01', 0, 1, '2026-03-09 02:22:24', '2026-03-09 02:22:24', '2026-03-09 09:31:49', '', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:31:40', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (20, 6, 6, 4, '工业平板电脑', 3, 'student01', 0, 1, '2026-03-09 09:37:57', '2026-03-09 09:37:57', '2026-03-09 09:38:36', '测试预约使用', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 09:38:11', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (21, 9, 42, 5, '测试设备', 3, 'student01', 0, 1, '2026-03-09 11:16:09', '2026-03-09 11:16:09', '2026-03-09 17:17:12', '测试用途', 1, NULL, '张老师', 1, NULL, NULL, '测试驳回归还', 2, '2026-03-09 17:17:01', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (22, 6, 12, 6, '工业平板电脑', 7, 'student04', 0, 1, '2026-03-09 17:09:28', '2026-03-09 17:09:28', '2026-03-09 17:15:23', '测试student04工业平板电脑', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-09 17:14:34', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (23, 6, 12, 8, '工业平板电脑', 7, 'student04', 0, 1, '2026-03-10 09:03:45', '2026-03-10 09:03:45', '2026-03-11 00:37:10', '测试撤销', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:35:16', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (24, 6, NULL, 11, '工业平板电脑', 7, 'student04', 0, 4, '2026-03-11 00:26:34', '2026-03-11 00:26:34', '2026-03-11 00:37:03', '测试用户04预约4台电脑', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:40', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (25, 8, NULL, 12, '测试', 7, 'student04', 0, 2, '2026-03-11 00:28:00', '2026-03-11 00:28:00', '2026-03-11 00:37:05', '测试跳转', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:39', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (26, 9, 43, 13, '测试设备', 7, 'student04', 0, 1, '2026-03-11 00:34:37', '2026-03-11 00:34:37', '2026-03-11 00:37:07', '测试跳转', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:38', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (27, 8, 37, 14, '测试', 7, 'student04', 0, 1, '2026-03-11 00:35:58', '2026-03-11 00:35:58', '2026-03-11 00:37:08', '', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-11 00:36:19', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (28, 6, NULL, 10, '工业平板电脑', 3, 'student01', 0, 4, '2026-03-11 09:22:53', '2026-03-11 09:22:53', '2026-03-11 09:23:13', '测试4台电脑', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 09:23:05', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (29, 1, NULL, 9, '电子天平', 3, 'student01', 0, 2, '2026-03-11 14:33:01', '2026-03-11 14:33:01', '2026-03-11 16:40:29', '测试电子天平2/5', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 16:15:40', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (30, 8, NULL, 15, '测试', 3, 'student01', 0, 4, '2026-03-11 17:19:42', '2026-03-11 17:19:42', '2026-03-11 17:22:47', '测试报废显示555', 1, NULL, '系统管理员', 1, NULL, NULL, '', 2, '2026-03-11 17:22:29', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (31, 6, 12, 16, '工业平板电脑', 3, 'student01', 0, 1, '2026-03-11 17:53:56', '2026-03-11 17:53:56', '2026-03-11 17:54:26', '测试zdzdzd', 0, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-11 17:54:14', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (32, 1, 24, 17, '测试设备1', 3, 'student01', 0, 1, '2026-03-12 15:38:34', '2026-03-12 15:38:34', '2026-03-27 10:38:39', '测试设备的预约用途', 0, NULL, '系统管理员', 1, NULL, NULL, NULL, 2, '2026-03-27 10:37:00', 4, 2);
+INSERT INTO `lab_equipment_apply` VALUES (33, 1, 24, 21, '计算机', 3, 'student01', 0, 1, '2026-03-27 15:22:03', '2026-03-27 15:22:03', '2026-03-27 16:01:10', '上课使用', 1, NULL, '张老师', 1, NULL, NULL, NULL, 2, '2026-03-27 15:24:19', NULL, NULL);
+INSERT INTO `lab_equipment_apply` VALUES (34, 1, 47, 22, '笔记本电脑', 3, 'student01', 0, 1, '2026-03-27 18:04:42', '2026-03-27 18:04:42', NULL, '上课使用', NULL, NULL, NULL, 1, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for lab_equipment_asset
@@ -129,7 +140,7 @@ CREATE TABLE `lab_equipment_asset`  (
   INDEX `idx_equipment_id`(`equipment_id`) USING BTREE,
   INDEX `idx_asset_status`(`status`) USING BTREE,
   CONSTRAINT `fk_asset_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 57 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备实例表：每台实物一条' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 172 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备实例表：每台实物一条' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of lab_equipment_asset
@@ -141,7 +152,7 @@ INSERT INTO `lab_equipment_asset` VALUES (13, 1, 'EQ-P2024001-03', 1, '2026-03-0
 INSERT INTO `lab_equipment_asset` VALUES (18, 6, 'EQ-PC2024002-03', 0, '2026-03-08 18:13:24', '2026-03-08 18:13:24');
 INSERT INTO `lab_equipment_asset` VALUES (19, 1, 'EQ-P2024001-04', 2, '2026-03-08 18:13:24', '2026-03-09 09:31:53');
 INSERT INTO `lab_equipment_asset` VALUES (23, 6, 'EQ-PC2024002-04', 0, '2026-03-08 18:13:24', '2026-03-08 18:13:24');
-INSERT INTO `lab_equipment_asset` VALUES (24, 1, 'EQ-P2024001-05', 1, '2026-03-08 18:13:24', '2026-03-12 15:38:31');
+INSERT INTO `lab_equipment_asset` VALUES (24, 1, 'EQ-P2024001-05', 2, '2026-03-08 18:13:24', '2026-03-27 16:01:10');
 INSERT INTO `lab_equipment_asset` VALUES (26, 6, 'EQ-PC2024002-05', 0, '2026-03-08 18:13:24', '2026-03-08 18:13:24');
 INSERT INTO `lab_equipment_asset` VALUES (28, 6, 'EQ-PC2024002-06', 0, '2026-03-08 18:13:24', '2026-03-08 18:13:24');
 INSERT INTO `lab_equipment_asset` VALUES (29, 6, 'EQ-PC2024002-07', 0, '2026-03-08 18:13:24', '2026-03-08 18:13:24');
@@ -156,7 +167,7 @@ INSERT INTO `lab_equipment_asset` VALUES (43, 9, 'EQ-20260304-02', 2, '2026-03-0
 INSERT INTO `lab_equipment_asset` VALUES (44, 9, 'EQ-20260304-03', 0, '2026-03-09 11:03:39', '2026-03-09 11:03:39');
 INSERT INTO `lab_equipment_asset` VALUES (45, 9, 'EQ-20260304-04', 0, '2026-03-09 11:03:39', '2026-03-09 11:03:39');
 INSERT INTO `lab_equipment_asset` VALUES (46, 9, 'EQ-20260304-05', 0, '2026-03-09 11:03:39', '2026-03-09 11:03:39');
-INSERT INTO `lab_equipment_asset` VALUES (47, 1, 'EQ-20260311-01', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
+INSERT INTO `lab_equipment_asset` VALUES (47, 1, 'EQ-20260311-01', 2, '2026-03-11 17:58:26', '2026-03-27 18:04:49');
 INSERT INTO `lab_equipment_asset` VALUES (48, 1, 'EQ-20260311-02', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
 INSERT INTO `lab_equipment_asset` VALUES (49, 1, 'EQ-20260311-03', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
 INSERT INTO `lab_equipment_asset` VALUES (50, 1, 'EQ-20260311-04', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
@@ -166,6 +177,121 @@ INSERT INTO `lab_equipment_asset` VALUES (53, 1, 'EQ-20260311-07', 0, '2026-03-1
 INSERT INTO `lab_equipment_asset` VALUES (54, 1, 'EQ-20260311-08', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
 INSERT INTO `lab_equipment_asset` VALUES (55, 1, 'EQ-20260311-09', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
 INSERT INTO `lab_equipment_asset` VALUES (56, 1, 'EQ-20260311-10', 0, '2026-03-11 17:58:26', '2026-03-11 17:58:26');
+INSERT INTO `lab_equipment_asset` VALUES (57, 2, 'EQ-20230327-01', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (58, 2, 'EQ-20230327-02', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (59, 2, 'EQ-20230327-03', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (60, 2, 'EQ-20230327-04', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (61, 2, 'EQ-20230327-05', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (62, 2, 'EQ-20230327-06', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (63, 2, 'EQ-20230327-07', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (64, 2, 'EQ-20230327-08', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (65, 2, 'EQ-20230327-09', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (66, 2, 'EQ-20230327-10', 0, '2026-03-27 08:30:57', '2026-03-27 08:30:57');
+INSERT INTO `lab_equipment_asset` VALUES (67, 3, 'EQ-2026001-01', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (68, 3, 'EQ-2026001-02', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (69, 3, 'EQ-2026001-03', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (70, 3, 'EQ-2026001-04', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (71, 3, 'EQ-2026001-05', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (72, 3, 'EQ-2026001-06', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (73, 3, 'EQ-2026001-07', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (74, 3, 'EQ-2026001-08', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (75, 3, 'EQ-2026001-09', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (76, 3, 'EQ-2026001-10', 0, '2026-03-27 11:08:31', '2026-03-27 11:08:31');
+INSERT INTO `lab_equipment_asset` VALUES (77, 4, 'EQ-2026002-01', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (78, 4, 'EQ-2026002-02', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (79, 4, 'EQ-2026002-03', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (80, 4, 'EQ-2026002-04', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (81, 4, 'EQ-2026002-05', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (82, 4, 'EQ-2026002-06', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (83, 4, 'EQ-2026002-07', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (84, 4, 'EQ-2026002-08', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (85, 4, 'EQ-2026002-09', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (86, 4, 'EQ-2026002-10', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (87, 4, 'EQ-2026002-11', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (88, 4, 'EQ-2026002-12', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (89, 4, 'EQ-2026002-13', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (90, 4, 'EQ-2026002-14', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (91, 4, 'EQ-2026002-15', 0, '2026-03-27 11:10:14', '2026-03-27 11:10:14');
+INSERT INTO `lab_equipment_asset` VALUES (92, 5, 'EQ-2026003-01', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (93, 5, 'EQ-2026003-02', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (94, 5, 'EQ-2026003-03', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (95, 5, 'EQ-2026003-04', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (96, 5, 'EQ-2026003-05', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (97, 5, 'EQ-2026003-06', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (98, 5, 'EQ-2026003-07', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (99, 5, 'EQ-2026003-08', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (100, 5, 'EQ-2026003-09', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (101, 5, 'EQ-2026003-10', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (102, 5, 'EQ-2026003-11', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (103, 5, 'EQ-2026003-12', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (104, 5, 'EQ-2026003-13', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (105, 5, 'EQ-2026003-14', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (106, 5, 'EQ-2026003-15', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (107, 5, 'EQ-2026003-16', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (108, 5, 'EQ-2026003-17', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (109, 5, 'EQ-2026003-18', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (110, 5, 'EQ-2026003-19', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (111, 5, 'EQ-2026003-20', 0, '2026-03-27 11:13:00', '2026-03-27 11:13:00');
+INSERT INTO `lab_equipment_asset` VALUES (112, 6, 'EQ-2026004-01', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (113, 6, 'EQ-2026004-02', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (114, 6, 'EQ-2026004-03', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (115, 6, 'EQ-2026004-04', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (116, 6, 'EQ-2026004-05', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (117, 6, 'EQ-2026004-06', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (118, 6, 'EQ-2026004-07', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (119, 6, 'EQ-2026004-08', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (120, 6, 'EQ-2026004-09', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (121, 6, 'EQ-2026004-10', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (122, 6, 'EQ-2026004-11', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (123, 6, 'EQ-2026004-12', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (124, 6, 'EQ-2026004-13', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (125, 6, 'EQ-2026004-14', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (126, 6, 'EQ-2026004-15', 0, '2026-03-27 11:20:32', '2026-03-27 11:20:32');
+INSERT INTO `lab_equipment_asset` VALUES (127, 7, 'EQ-2026005-01', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (128, 7, 'EQ-2026005-02', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (129, 7, 'EQ-2026005-03', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (130, 7, 'EQ-2026005-04', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (131, 7, 'EQ-2026005-05', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (132, 7, 'EQ-2026005-06', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (133, 7, 'EQ-2026005-07', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (134, 7, 'EQ-2026005-08', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (135, 7, 'EQ-2026005-09', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (136, 7, 'EQ-2026005-10', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (137, 7, 'EQ-2026005-11', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (138, 7, 'EQ-2026005-12', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (139, 7, 'EQ-2026005-13', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (140, 7, 'EQ-2026005-14', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (141, 7, 'EQ-2026005-15', 0, '2026-03-27 11:21:27', '2026-03-27 11:21:27');
+INSERT INTO `lab_equipment_asset` VALUES (142, 8, 'EQ-2026006-01', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (143, 8, 'EQ-2026006-02', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (144, 8, 'EQ-2026006-03', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (145, 8, 'EQ-2026006-04', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (146, 8, 'EQ-2026006-05', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (147, 8, 'EQ-2026006-06', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (148, 8, 'EQ-2026006-07', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (149, 8, 'EQ-2026006-08', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (150, 8, 'EQ-2026006-09', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (151, 8, 'EQ-2026006-10', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (152, 8, 'EQ-2026006-11', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (153, 8, 'EQ-2026006-12', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (154, 8, 'EQ-2026006-13', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (155, 8, 'EQ-2026006-14', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (156, 8, 'EQ-2026006-15', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (157, 8, 'EQ-2026006-16', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (158, 8, 'EQ-2026006-17', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (159, 8, 'EQ-2026006-18', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (160, 8, 'EQ-2026006-19', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (161, 8, 'EQ-2026006-20', 0, '2026-03-27 11:22:40', '2026-03-27 11:22:40');
+INSERT INTO `lab_equipment_asset` VALUES (162, 9, 'EQ-2026007-01', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (163, 9, 'EQ-2026007-02', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (164, 9, 'EQ-2026007-03', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (165, 9, 'EQ-2026007-04', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (166, 9, 'EQ-2026007-05', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (167, 9, 'EQ-2026007-06', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (168, 9, 'EQ-2026007-07', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (169, 9, 'EQ-2026007-08', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (170, 9, 'EQ-2026007-09', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
+INSERT INTO `lab_equipment_asset` VALUES (171, 9, 'EQ-2026007-10', 0, '2026-03-27 11:23:27', '2026-03-27 11:23:27');
 
 -- ----------------------------
 -- Table structure for lab_equipment_group
@@ -226,7 +352,7 @@ CREATE TABLE `lab_equipment_maintain`  (
   CONSTRAINT `fk_maintain_asset` FOREIGN KEY (`asset_id`) REFERENCES `lab_equipment_asset` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_maintain_assign_user` FOREIGN KEY (`assign_user_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `fk_maintain_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备维护记录表：设备删除受限（需先完结维护记录）；申请人删除时，关联记录同步删除；维修人员删除时，指派人员ID设为NULL' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备维护记录表：设备删除受限（需先完结维护记录）；申请人删除时，关联记录同步删除；维修人员删除时，指派人员ID设为NULL' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of lab_equipment_maintain
@@ -238,6 +364,8 @@ INSERT INTO `lab_equipment_maintain` VALUES (4, 9, 43, '测试设备', 1, 7, '�
 INSERT INTO `lab_equipment_maintain` VALUES (5, 1, NULL, '电子天平', 1, 3, 'student01', 4, 'repairer01', '测试使用年限已到', '2026-03-11 16:41:44', 0.00, 2, NULL, NULL, '2026-03-11 16:40:29', '2026-03-11 16:41:41', NULL);
 INSERT INTO `lab_equipment_maintain` VALUES (6, 8, NULL, '测试', 1, 3, '李四', 4, 'repairer01', '修复完成', '2026-03-11 17:21:27', 555.00, 2, NULL, NULL, '2026-03-11 17:21:04', '2026-03-11 17:21:25', NULL);
 INSERT INTO `lab_equipment_maintain` VALUES (7, 8, NULL, '测试', 1, 3, 'student01', 4, 'repairer01', 'ziduan字段', '2026-03-11 17:25:31', 0.00, 2, NULL, NULL, '2026-03-11 17:22:45', '2026-03-11 17:25:28', NULL);
+INSERT INTO `lab_equipment_maintain` VALUES (8, 1, 24, '计算机', 1, 3, 'student01', 4, 'repairer01', '维修成本大于实际价值', '2026-03-27 18:02:02', 0.00, 2, NULL, NULL, '2026-03-27 16:01:12', '2026-03-27 18:02:01', NULL);
+INSERT INTO `lab_equipment_maintain` VALUES (9, 1, 47, '笔记本电脑', 1, 3, '李四', 4, 'repairer01', '损坏严重,无法修复', '2026-03-27 18:05:15', 0.00, 2, NULL, NULL, '2026-03-27 18:04:49', '2026-03-27 18:05:15', NULL);
 
 -- ----------------------------
 -- Table structure for lab_equipment_reserve
@@ -268,7 +396,7 @@ CREATE TABLE `lab_equipment_reserve`  (
   INDEX `idx_status`(`status`) USING BTREE COMMENT '预约状态索引（筛选待确认预约）',
   CONSTRAINT `fk_reserve_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_reserve_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备预约表：设备删除受限（需先取消预约）；预约人删除时，关联记录同步删除' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备预约表：设备删除受限（需先取消预约）；预约人删除时，关联记录同步删除' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of lab_equipment_reserve
@@ -288,10 +416,13 @@ INSERT INTO `lab_equipment_reserve` VALUES (13, 9, '测试设备', 7, '测试的
 INSERT INTO `lab_equipment_reserve` VALUES (14, 8, '测试', 7, '测试的student04', 1, '2026-03-11', '00:35:29', '03:35:29', NULL, 1, NULL, 1, '2026-03-11 00:35:39', '2026-03-11 00:36:06', NULL);
 INSERT INTO `lab_equipment_reserve` VALUES (15, 8, '测试', 3, '李四', 4, '2026-03-10', '16:18:48', '19:18:48', '测试报废显示555', 1, NULL, 1, '2026-03-11 17:19:12', '2026-03-11 17:19:40', NULL);
 INSERT INTO `lab_equipment_reserve` VALUES (16, 6, '工业平板电脑', 3, '李四', 1, '2026-03-02', '19:24:30', '22:24:30', '测试zdzdzd', 1, NULL, 1, '2026-03-11 17:24:45', '2026-03-11 17:54:03', NULL);
-INSERT INTO `lab_equipment_reserve` VALUES (17, 1, '测试设备1', 3, '李四', 1, '2026-03-12', '15:35:35', '17:35:35', '测试设备的预约用途', 1, NULL, 1, '2026-03-12 15:37:52', '2026-03-12 15:58:55', NULL);
-INSERT INTO `lab_equipment_reserve` VALUES (18, 1, '测试设备1', 3, '李四', 1, '2026-03-12', '15:39:49', '16:39:49', '测试2', 1, NULL, 0, '2026-03-12 15:40:02', '2026-03-12 15:40:06', NULL);
-INSERT INTO `lab_equipment_reserve` VALUES (19, 1, '测试设备1', 3, '李四', 1, '2026-03-11', '15:08:39', '15:59:41', '测试', 0, NULL, 0, '2026-03-12 16:08:50', '2026-03-12 16:08:50', NULL);
-INSERT INTO `lab_equipment_reserve` VALUES (20, 1, '测试设备1', 3, '李四', 1, '2026-03-11', '15:09:38', '16:09:38', NULL, 0, NULL, 0, '2026-03-12 16:09:46', '2026-03-12 16:09:46', NULL);
+INSERT INTO `lab_equipment_reserve` VALUES (17, 1, '测试设备1', 3, '李四', 1, '2026-03-12', '15:35:35', '19:35:35', '测试设备的预约用途', 1, NULL, 1, '2026-03-12 15:37:52', '2026-03-12 16:49:29', NULL);
+INSERT INTO `lab_equipment_reserve` VALUES (18, 1, '测试设备1', 3, '李四', 1, '2026-03-12', '15:39:49', '16:39:49', '测试2', 4, NULL, 0, '2026-03-12 15:40:02', '2026-03-27 10:35:12', 2);
+INSERT INTO `lab_equipment_reserve` VALUES (19, 1, '测试设备1', 3, '李四', 1, '2026-03-11', '15:08:39', '15:59:41', '测试', 4, NULL, 0, '2026-03-12 16:08:50', '2026-03-27 10:35:14', 2);
+INSERT INTO `lab_equipment_reserve` VALUES (20, 1, '测试设备1', 3, '李四', 1, '2026-03-11', '15:09:38', '16:09:38', NULL, 4, NULL, 0, '2026-03-12 16:09:46', '2026-03-27 10:35:16', 2);
+INSERT INTO `lab_equipment_reserve` VALUES (21, 1, '计算机', 3, '李四', 1, '2026-03-27', '10:36:48', '11:31:48', '上课使用', 1, NULL, 1, '2026-03-27 10:35:46', '2026-03-27 15:22:03', NULL);
+INSERT INTO `lab_equipment_reserve` VALUES (22, 1, '笔记本电脑', 3, '李四', 1, '2026-03-27', '15:15:27', '16:15:27', '上课使用', 1, NULL, 1, '2026-03-27 15:21:34', '2026-03-27 18:04:41', NULL);
+INSERT INTO `lab_equipment_reserve` VALUES (23, 2, '电子分析天平', 3, '李四', 1, '2026-03-27', '15:23:46', '17:23:46', '测量重量', 1, NULL, 0, '2026-03-27 15:24:11', '2026-03-27 18:04:08', NULL);
 
 -- ----------------------------
 -- Table structure for lab_equipment_scrap
@@ -299,7 +430,8 @@ INSERT INTO `lab_equipment_reserve` VALUES (20, 1, '测试设备1', 3, '李四',
 DROP TABLE IF EXISTS `lab_equipment_scrap`;
 CREATE TABLE `lab_equipment_scrap`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '自增ID（报废记录唯一标识）',
-  `equipment_id` bigint(20) NOT NULL COMMENT '关联设备ID（唯一）',
+  `equipment_id` bigint(20) NOT NULL COMMENT '关联设备类型ID（lab_equipment.id，同一类型可有多条报废）',
+  `asset_id` bigint(20) NULL DEFAULT NULL COMMENT '关联设备实例ID（lab_equipment_asset.id）',
   `equipment_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '设备名称（冗余字段，用于前端展示）',
   `scrap_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '报废原因（如“超年限、高维修成本”）',
   `residual_value` decimal(10, 2) NOT NULL COMMENT '残值',
@@ -313,23 +445,25 @@ CREATE TABLE `lab_equipment_scrap`  (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_equipment_id`(`equipment_id`) USING BTREE COMMENT '设备ID唯一（一个设备仅能报废一次）',
   INDEX `idx_apply_user_id`(`apply_user_id`) USING BTREE COMMENT '申请人ID索引（查询管理员提交的报废记录）',
   INDEX `idx_approval_status`(`approval_status`) USING BTREE COMMENT '审批状态索引（筛选待审批记录）',
   INDEX `fk_scrap_approval_user`(`approval_user_id`) USING BTREE,
+  UNIQUE INDEX `uk_asset_id`(`asset_id`) USING BTREE COMMENT '实例仅能有一条报废申请',
+  INDEX `idx_equipment_id`(`equipment_id`) USING BTREE COMMENT '设备类型ID索引',
   CONSTRAINT `fk_scrap_apply_user` FOREIGN KEY (`apply_user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_scrap_approval_user` FOREIGN KEY (`approval_user_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
-  CONSTRAINT `fk_scrap_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备报废表：设备删除受限（需先驳回报废申请）；申请人删除时，关联记录同步删除；审批人删除时，审批人ID设为NULL' ROW_FORMAT = DYNAMIC;
+  CONSTRAINT `fk_scrap_equipment` FOREIGN KEY (`equipment_id`) REFERENCES `lab_equipment` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_scrap_asset` FOREIGN KEY (`asset_id`) REFERENCES `lab_equipment_asset` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '设备报废表：设备删除受限（需先驳回报废申请）；申请人删除时，关联记录同步删除；审批人删除时，审批人ID设为NULL' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of lab_equipment_scrap
 -- ----------------------------
-INSERT INTO `lab_equipment_scrap` VALUES (1, 6, '工业平板电脑', '使用年限超8年，硬件老化严重，维修成本高于残值', 500.00, 1, '系统管理员', NULL, NULL, 1, '回收处理', '2025-11-28 16:53:59', '2025-11-13 16:53:59', '2026-03-07 17:47:10');
-INSERT INTO `lab_equipment_scrap` VALUES (2, 3, NULL, '测试', 0.00, 4, NULL, 1, NULL, 1, '销毁', '2026-03-09 09:36:37', '2026-03-09 09:36:13', '2026-03-09 09:36:37');
-INSERT INTO `lab_equipment_scrap` VALUES (3, 8, NULL, '测试500', 0.00, 4, NULL, 2, NULL, 1, '回收', '2026-03-09 11:00:51', '2026-03-09 11:00:34', '2026-03-09 11:00:52');
-INSERT INTO `lab_equipment_scrap` VALUES (4, 1, NULL, '测试使用年限已到', 0.00, 4, NULL, 1, NULL, 1, '测试回收处理', '2026-03-11 17:14:42', '2026-03-11 16:41:42', '2026-03-11 17:14:39');
-INSERT INTO `lab_equipment_scrap` VALUES (5, 9, NULL, '测试报废字段显示', 0.00, 4, NULL, 1, NULL, 1, '测试666', '2026-03-11 17:15:56', '2026-03-11 17:15:39', '2026-03-11 17:15:54');
+INSERT INTO `lab_equipment_scrap` VALUES (1, 6, NULL, '工业平板电脑', '使用年限超8年，硬件老化严重，维修成本高于残值', 500.00, 1, '系统管理员', NULL, NULL, 1, '回收处理', '2025-11-28 16:53:59', '2025-11-13 16:53:59', '2026-03-07 17:47:10');
+INSERT INTO `lab_equipment_scrap` VALUES (2, 3, NULL, NULL, '测试', 0.00, 4, NULL, 1, NULL, 1, '销毁', '2026-03-09 09:36:37', '2026-03-09 09:36:13', '2026-03-09 09:36:37');
+INSERT INTO `lab_equipment_scrap` VALUES (3, 8, NULL, NULL, '测试500', 0.00, 4, NULL, 2, NULL, 1, '回收', '2026-03-09 11:00:51', '2026-03-09 11:00:34', '2026-03-09 11:00:52');
+INSERT INTO `lab_equipment_scrap` VALUES (4, 1, NULL, NULL, '测试使用年限已到', 0.00, 4, NULL, 1, NULL, 1, '测试回收处理', '2026-03-11 17:14:42', '2026-03-11 16:41:42', '2026-03-11 17:14:39');
+INSERT INTO `lab_equipment_scrap` VALUES (5, 9, NULL, NULL, '测试报废字段显示', 0.00, 4, NULL, 1, NULL, 1, '测试666', '2026-03-11 17:15:56', '2026-03-11 17:15:39', '2026-03-11 17:15:54');
 
 -- ----------------------------
 -- Table structure for lab_laboratory
@@ -530,11 +664,11 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 INSERT INTO `sys_user` VALUES (1, 'admin', '123456', '系统管理员', '13800138000', 'admin@lab.com', 1, '2025-12-28 16:53:59', '2026-03-04 23:54:22');
 INSERT INTO `sys_user` VALUES (2, 'teacher01', '123456', '张老师', '13900139001', 'teacher01@lab.com', 1, '2025-12-28 16:53:59', '2026-03-02 23:44:42');
-INSERT INTO `sys_user` VALUES (3, 'student01', '123456', '李四', '13700137002', 'student01@lab.com', 1, '2025-12-28 16:53:59', '2026-03-02 02:48:30');
+INSERT INTO `sys_user` VALUES (3, 'student01', '123456', '李四', '13730017002', '3796796581@qq.com', 1, '2025-12-28 16:53:59', '2026-03-27 17:31:09');
 INSERT INTO `sys_user` VALUES (4, 'repairer01', '123456', '维修员', '19711085124', 'repairer@lab.com', 1, '2026-03-02 02:17:40', '2026-03-06 15:41:50');
-INSERT INTO `sys_user` VALUES (5, 'student02', '$2a$10$a/nQesVj5tqWiIMLyRPjkeqWF7kYF8NRlyYSNugE7zSqApE6fjbkK', '测试1', '123', '123@qq.com', 1, '2026-03-07 23:09:01', '2026-03-07 23:09:01');
-INSERT INTO `sys_user` VALUES (6, 'student03', '$2a$10$.N6sN8Dpjk9gqqSv5pElgOECJDiuxB37htkHgvMUNjZKxeWYG7vKW', '测试03', '123', '123@qq.com', 1, '2026-03-08 00:24:26', '2026-03-08 00:24:26');
-INSERT INTO `sys_user` VALUES (7, 'student04', '$2a$10$dQRAh7zVglqyAPRAVGG6zO2wvmG07Ox2YcCfcvFE.iKirohbn2fVa', '测试的student04', '19711085124', 'liyaokui0197@gmail.com', 1, '2026-03-09 17:04:02', '2026-03-09 17:04:02');
+INSERT INTO `sys_user` VALUES (5, 'student02', '$2a$10$a/nQesVj5tqWiIMLyRPjkeqWF7kYF8NRlyYSNugE7zSqApE6fjbkK', '李明', '15349633716', '2682316517@qq.com', 1, '2026-03-07 23:09:01', '2026-03-27 17:30:08');
+INSERT INTO `sys_user` VALUES (6, 'student03', '$2a$10$.N6sN8Dpjk9gqqSv5pElgOECJDiuxB37htkHgvMUNjZKxeWYG7vKW', '刘菲', '15453248809', '3780347128@qq.com', 1, '2026-03-08 00:24:26', '2026-03-27 17:33:10');
+INSERT INTO `sys_user` VALUES (7, 'student04', '$2a$10$dQRAh7zVglqyAPRAVGG6zO2wvmG07Ox2YcCfcvFE.iKirohbn2fVa', '张远', '19711085124', 'zhangyuan019@gmail.com', 1, '2026-03-09 17:04:02', '2026-03-27 17:32:47');
 
 -- ----------------------------
 -- Table structure for sys_user_role
@@ -551,17 +685,17 @@ CREATE TABLE `sys_user_role`  (
   INDEX `fk_user_role_role`(`role_id`) USING BTREE,
   CONSTRAINT `fk_user_role_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_user_role_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户角色关联表（多对多）：用户删除时，关联记录同步删除；角色删除时，关联记录同步删除' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户角色关联表（多对多）：用户删除时，关联记录同步删除；角色删除时，关联记录同步删除' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_user_role
 -- ----------------------------
 INSERT INTO `sys_user_role` VALUES (1, 1, '系统管理员', 1, '系统管理员');
 INSERT INTO `sys_user_role` VALUES (2, 2, '张老师', 2, '教师');
-INSERT INTO `sys_user_role` VALUES (3, 3, '李四', 3, '学生');
 INSERT INTO `sys_user_role` VALUES (5, 4, '维修员', 4, '维修师傅');
-INSERT INTO `sys_user_role` VALUES (6, 5, NULL, 3, NULL);
-INSERT INTO `sys_user_role` VALUES (7, 6, '测试03', 3, '学生');
-INSERT INTO `sys_user_role` VALUES (8, 7, '测试的student04', 3, '学生');
+INSERT INTO `sys_user_role` VALUES (9, 5, '李明', 3, '学生');
+INSERT INTO `sys_user_role` VALUES (10, 3, '李四', 3, '学生');
+INSERT INTO `sys_user_role` VALUES (12, 7, '张远', 3, '学生');
+INSERT INTO `sys_user_role` VALUES (13, 6, '刘菲', 3, '学生');
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -27,6 +27,19 @@ spring:
       connection-timeout: 20000
       idle-timeout: 60000
       keepalive-time: 30000
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 3s
 
 # MyBatis：指定 mapper XML 位置，否则找不到 DeviceDao.getDevices 等绑定
 mybatis:

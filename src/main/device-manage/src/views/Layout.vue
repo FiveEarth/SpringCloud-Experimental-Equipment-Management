@@ -4,8 +4,8 @@
     <header class="top-header">
       <div class="header-left">
         <div class="logo-icon">实</div>
-        <span class="platform-name">实验工具管理平台</span>
-        <el-tag size="small" class="role-tag" type="info" effect="plain">{{ roleLabel }}</el-tag>
+        <span class="platform-name">实验设备管理平台</span>
+        <el-tag size="small" class="role-tag" type="info" ef  fect="plain">{{ roleLabel }}</el-tag>
       </div>
       <div class="header-right">
         <span class="user-name">{{ userDisplayName }}</span>
@@ -40,11 +40,12 @@
       <el-aside :width="asideWidth" class="aside">
         <el-menu
           :default-active="$route.path"
-          :router="true"
+          :router="false"
           class="side-menu"
           background-color="#fff"
           text-color="#606266"
           active-text-color="#409eff"
+          @select="handleMenuSelect"
         >
           <template v-for="item in menuItems" :key="item.path">
             <el-menu-item :index="item.path">
@@ -56,7 +57,7 @@
       </el-aside>
 
       <el-main class="main-content">
-        <router-view :key="$route.fullPath" />
+        <router-view :key="`${$route.fullPath}-${viewRefreshKey}`" />
       </el-main>
     </el-container>
   </div>
@@ -73,6 +74,7 @@ export default {
     return {
       roles: [],
       asideWidth: '200px',
+      viewRefreshKey: 0,
       iconMap: {
         House,
         Box,
@@ -95,7 +97,7 @@ export default {
       return ''
     },
     roleLabel() {
-      const map = { ADMIN: '管理员', TEACHER: '教师', STUDENT: '学生', REPAIR: '维修师傅' }
+      const map = { ADMIN: '管理员', TEACHER: '教师', STUDENT: '学生', REPAIR: '维修员' }
       if (this.roles.includes('ADMIN')) return map.ADMIN
       if (this.roles.includes('TEACHER')) return map.TEACHER
       if (this.roles.includes('REPAIR')) return map.REPAIR
@@ -112,13 +114,15 @@ export default {
       const items = []
       if (this.roles.includes('STUDENT') && !this.roles.includes('ADMIN') && !this.roles.includes('TEACHER') && !this.roles.includes('REPAIR')) {
         items.push({ path: '/dashboard', title: '工作台', icon: 'House' })
-        items.push({ path: '/devices', title: '可借用工具', icon: 'Box' })
+        items.push({ path: '/devices', title: '设备列表', icon: 'Box' })
         items.push({ path: '/my-reserve', title: '我的预约', icon: 'List' })
         items.push({ path: '/my-apply', title: '我的领用', icon: 'Document' })
+        items.push({ path: '/my-maintain', title: '维修申请', icon: 'Tools' })
         return items
       }
       if (this.roles.includes('REPAIR') && !this.roles.includes('ADMIN')) {
         items.push({ path: '/repairer-dashboard', title: '工作台', icon: 'House' })
+        items.push({ path: '/repairer-devices', title: '设备列表', icon: 'Box' })
         items.push({ path: '/maintain-pending', title: '维修列表', icon: 'Tools' })
         items.push({ path: '/maintain-stats', title: '维修统计', icon: 'DataBoard' })
         return items
@@ -127,6 +131,7 @@ export default {
         items.push({ path: '/apply-approve', title: '归还审批', icon: 'Document' })
         items.push({ path: '/reserve-approve', title: '预约审批', icon: 'List' })
         items.push({ path: '/scrap-approve', title: '报废审批', icon: 'Document' })
+        items.push({ path: '/maintain-records', title: '维修记录', icon: 'Tools' })
         items.push({ path: '/usage-stats', title: '使用统计', icon: 'DataBoard' })
         items.push({ path: '/devices', title: '设备列表', icon: 'Box' })
         return items
@@ -139,6 +144,7 @@ export default {
         items.push({ path: '/reserve-approve', title: '预约审批', icon: 'List' })
         items.push({ path: '/scrap-approve', title: '报废审批', icon: 'Document' })
         items.push({ path: '/usage-stats', title: '使用统计', icon: 'DataBoard' })
+        items.push({ path: '/maintain-records', title: '维修申请', icon: 'Tools' })
         items.push({ path: '/audit', title: '日志审计', icon: 'DataBoard' })
         return items
       }
@@ -149,6 +155,12 @@ export default {
     this.roles = getRoles()
   },
   methods: {
+    handleMenuSelect(path) {
+      this.viewRefreshKey += 1
+      if (this.$route.path !== path) {
+        this.$router.push(path)
+      }
+    },
     logout() {
       clearAuth()
       this.$router.push('/login')

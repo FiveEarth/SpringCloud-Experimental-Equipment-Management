@@ -110,7 +110,7 @@ export default {
     formatDateTime,
     formatRoles(roleIds) {
       if (!roleIds || !roleIds.length) return '-'
-      const map = { 1: '管理员', 2: '教师', 3: '学生', 4: '维修师傅' }
+      const map = { 1: '管理员', 2: '教师', 3: '学生', 4: '维修员' }
       return roleIds.map(id => map[id] || id).join('、')
     },
     async loadRoles() {
@@ -175,11 +175,6 @@ export default {
 .table-wrap { margin-top: 0; }
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: var(--el-table-row-hover-bg-color, #f5f7fa); }
-.table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) { opacity: 1; }
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }
 </style>

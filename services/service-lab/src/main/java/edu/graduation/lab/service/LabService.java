@@ -13,5 +13,7 @@ public interface LabService {
     void addLabs(List<Lab> labs);
 
     void deleteLabs(List<Long> ids);
+
+    void updateLab(Lab lab);
 }
 

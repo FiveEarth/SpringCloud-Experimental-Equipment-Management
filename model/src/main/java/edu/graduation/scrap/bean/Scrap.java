@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class Scrap {
     private Long id;
     private Long equipmentId;
-    /** 设备实例ID（报废哪一台，可选） */
+    /** 设备实例ID（lab_equipment_asset.id），接口提交报废时必填 */
     private Long assetId;
     private String equipmentName;
     private String scrapReason;

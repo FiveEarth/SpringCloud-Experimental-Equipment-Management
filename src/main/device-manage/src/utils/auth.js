@@ -8,6 +8,8 @@ const KEY_USER_NAME = 'userName'
 const KEY_USERNAME = 'username'
 const KEY_ROLES = 'roles'
 const KEY_PERMS = 'perms'
+const KEY_LAST_ACTIVE_AT = 'lastActiveAt'
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000
 
 const storage = typeof window !== 'undefined' ? window.sessionStorage : null
 
@@ -90,6 +92,7 @@ export function setLoginData(data) {
   setUsername(data.username || '')
   setRoles(data.roles || [])
   setPerms(data.permissions || [])
+  touchSession()
 }
 
 export function clearAuth() {
@@ -100,8 +103,34 @@ export function clearAuth() {
   storage.removeItem(KEY_USERNAME)
   storage.removeItem(KEY_ROLES)
   storage.removeItem(KEY_PERMS)
+  storage.removeItem(KEY_LAST_ACTIVE_AT)
 }
 
 export function isLoggedIn() {
   return !!getToken()
+}
+
+export function touchSession() {
+  if (!storage) return
+  storage.setItem(KEY_LAST_ACTIVE_AT, String(Date.now()))
+}
+
+export function getLastActiveAt() {
+  if (!storage) return 0
+  const raw = storage.getItem(KEY_LAST_ACTIVE_AT)
+  if (!raw) return 0
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
+export function isSessionIdleExpired() {
+  const token = getToken()
+  if (!token) return false
+  const last = getLastActiveAt()
+  if (!last) return false
+  return Date.now() - last > IDLE_TIMEOUT_MS
+}
+
+export function getIdleTimeoutMs() {
+  return IDLE_TIMEOUT_MS
 }

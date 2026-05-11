@@ -2,7 +2,7 @@
   <div class="page student-dashboard">
     <header class="page-header">
       <h2 class="page-title">学生工作台</h2>
-      <p class="page-desc">查看当前借用与历史记录，预约并使用实验室设备。</p>
+      <p class="page-desc">快速完成设备查询与预约操作。</p>
     </header>
     <!-- 汇总卡片 -->
     <el-row :gutter="16" class="summary-row">
@@ -11,7 +11,7 @@
           <div class="summary-value">{{ currentBorrow }}</div>
           <div class="summary-label">件</div>
           <div class="summary-desc">当前借用</div>
-          <div class="summary-sub">共 {{ currentBorrow }} 件工具借用中</div>
+          <div class="summary-sub">当前借用中的设备数量</div>
         </el-card>
       </el-col>
       <el-col :span="8">
@@ -31,15 +31,15 @@
       </el-col>
     </el-row>
 
-    <!-- 可借用工具 -->
+    <!-- 可借用设备 -->
     <el-card class="tools-section list-card" shadow="hover">
       <template #header>
-        <span class="section-title">可借用工具</span>
+        <span class="section-title">可借用设备</span>
       </template>
       <div class="tools-toolbar">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索工具..."
+          placeholder="搜索设备..."
           clearable
           class="search-input"
         >
@@ -74,6 +74,13 @@
                 @click="openReserve(item)"
               >
                 预约使用
+              </el-button>
+              <el-button
+                type="info"
+                class="detail-btn"
+                @click="openDeviceDetail(item)"
+              >
+                设备详情
               </el-button>
             </div>
           </el-card>
@@ -154,6 +161,29 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="detailVisible" title="设备详情" width="520px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="设备编号">{{ detailRow?.equipmentCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备名称">{{ detailRow?.deviceName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="型号">{{ detailRow?.model || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="实验室">{{ detailRow?.labName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="采购日期">{{ detailRow?.purchaseDate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="规格参数">{{ detailRow?.specification || '-' }}</el-descriptions-item>
+        <!-- <el-descriptions-item label="说明书路径">
+          <template v-if="detailRow?.manualUrl">
+            <a :href="detailRow.manualUrl" target="_blank" rel="noreferrer">打开说明书</a>
+          </template>
+          <template v-else>-</template>
+        </el-descriptions-item> -->
+        <el-descriptions-item label="状态">{{ detailRow?.statusText || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="可借数量">{{ detailRow?.count != null ? detailRow.count : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备总数">{{ detailRow?.totalCount != null ? detailRow.totalCount : '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 申请借用弹窗 -->
     <!-- <el-dialog v-model="applyVisible" title="申请借用" width="500px">
       <el-form :model="applyForm" label-width="100px">
@@ -195,6 +225,9 @@ const reserveVisible = ref(false)
 const reserveLoading = ref(false)
 const selectedReserveItem = ref(null)
 const reserveForm = ref({ equipmentId: null, deviceName: '', reserveDate: '', startTime: '', endTime: '', purpose: '', reserveQuantity: 1 })
+
+const detailVisible = ref(false)
+const detailRow = ref(null)
 
 const currentBorrow = computed(() => applyList.value.filter(a => a.approve_status === 1 && !a.return_time).length)
 const historyCount = computed(() => applyList.value.length)
@@ -269,6 +302,16 @@ function openReserve(item) {
   reserveVisible.value = true
 }
 
+function openDeviceDetail(group) {
+  if (!group) return
+  const id = group.firstId
+  let d = null
+  if (id != null) d = devices.value.find(x => x.deviceId === id) || null
+  if (!d && group.name) d = devices.value.find(x => (x.deviceName || '') === group.name) || null
+  detailRow.value = d
+  detailVisible.value = true
+}
+
 async function submitReserve() {
   const f = reserveForm.value
   if (!f.equipmentId || !f.reserveDate || !f.startTime || !f.endTime) {
@@ -307,10 +350,10 @@ async function submitReserve() {
     if (r.data?.code === 200) {
       reserveVisible.value = false
       loadApplyList()
-      ElMessage.success('预约已提交，请等待管理员或教师审批；通过后可在「我的预约」点击领用')
+      ElMessage.success('预约提交成功，请等待审批')
     }
   } catch (e) {
-    console.error(e)
+    ElMessage.error(e.response?.data?.msg || '预约提交失败')
   } finally {
     reserveLoading.value = false
   }
@@ -354,7 +397,7 @@ async function loadDevices() {
     const r = await axios.get('/api/device/devices', { params: { borrowable: true } })
     if (r.data?.code === 200) devices.value = r.data.data || []
   } catch (e) {
-    console.error(e)
+    ElMessage.error('设备列表加载失败')
   }
 }
 
@@ -365,7 +408,7 @@ async function loadApplyList() {
     const r = await axios.get('/api/apply/applies/user/' + userId)
     if (r.data?.code === 200) applyList.value = r.data.data || []
   } catch (e) {
-    console.error(e)
+    ElMessage.error('借用记录加载失败')
   }
 }
 
@@ -460,7 +503,8 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 .apply-btn,
-.reserve-btn {
+.reserve-btn,
+.detail-btn {
   flex: 1;
   min-width: 0;
 }

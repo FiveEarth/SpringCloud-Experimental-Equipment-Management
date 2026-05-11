@@ -2,7 +2,7 @@
   <div class="page">
     <header class="page-header">
       <h2 class="page-title">我的领用</h2>
-      <p class="page-desc">只管理领用/归还生命周期：待领用记录在此点击「领用」开始使用；领用中可申请归还，审批通过后完成归还。</p>
+      <p class="page-desc">管理领用与归还记录。</p>
     </header>
     <div class="page-filter">
       <el-button type="primary" size="default" @click="load">刷新</el-button>
@@ -17,7 +17,7 @@
     </div>
     <el-card class="list-card" shadow="hover">
       <div class="table-wrap">
-      <el-table :data="filteredMergedList" class="page-table table-hover-actions" border style="width: 100%" empty-text="暂无记录" :row-class-name="tableRowClassName">
+      <el-table :data="filteredMergedList" class="page-table" border style="width: 100%" empty-text="暂无记录" :row-class-name="tableRowClassName">
       <el-table-column label="类型" width="100">
         <template #default="{ row }">
           <span v-if="row._fromReserve">预约(待领用)</span>
@@ -212,8 +212,6 @@ export default {
         const r = await axios.get('/api/device/devices', { params: { borrowable: true } })
         if (r.data?.code === 200) this.devices = r.data.data || []
       } catch (e) {
-        // 补充空块的注释+错误提示，解决no-empty报错，同时提升用户体验
-        console.error('加载设备列表失败：', e)
         this.$message.error('设备列表加载失败，请刷新重试')
       }
     },
@@ -227,7 +225,6 @@ export default {
         const r = await axios.get('/api/apply/applies/user/' + userId)
         if (r.data?.code === 200) this.list = r.data.data || []
       } catch (e) {
-        console.error('加载领用列表失败：', e)
         this.$message.error('领用列表加载失败，请刷新重试')
       }
     },
@@ -246,7 +243,6 @@ export default {
           this.reserveList = []
         }
       } catch (e) {
-        console.error('加载预约列表失败：', e)
         this.$message.error('预约列表加载失败，待领用记录可能不完整')
         this.reserveList = []
       }
@@ -539,14 +535,6 @@ export default {
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: #F5F7FA; }
 .page-table :deep(.el-table__body tr.row-highlight) { background-color: #ECF5FF; }
-
-/* .table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) {
-  opacity: 1;
-} */
 
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }

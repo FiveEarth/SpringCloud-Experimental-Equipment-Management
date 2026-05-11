@@ -34,4 +34,16 @@
         </foreach>
     </delete>
 
+    <update id="updateOne" parameterType="edu.graduation.lab.bean.Lab">
+        UPDATE lab_laboratory
+        <set>
+            <if test="labName != null">lab_name = #{labName},</if>
+            <if test="labLocation != null">lab_location = #{labLocation},</if>
+            <if test="labManager != null">lab_manager = #{labManager},</if>
+            <if test="status != null">status = #{status},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
 </mapper>

@@ -2,7 +2,7 @@
   <div class="register-page">
     <el-card class="register-card">
       <h2 class="title">用户注册</h2>
-      <p class="subtitle">实验工具管理平台 · 注册后默认为学生角色</p>
+      <p class="subtitle">实验设备管理平台 · 注册后默认为学生角色</p>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" placeholder="学号/工号，用于登录" autocomplete="off" />
@@ -13,14 +13,14 @@
         <el-form-item label="确认密码" prop="confirmPassword">
           <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password autocomplete="off" />
         </el-form-item>
-        <el-form-item label="姓名" prop="realName">
-          <el-input v-model="form.realName" placeholder="真实姓名（选填）" autocomplete="off" />
+        <el-form-item label="姓名" prop="realName" required>
+          <el-input v-model="form.realName" placeholder="真实姓名" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="手机" prop="phone">
-          <el-input v-model="form.phone" placeholder="手机号（选填）" autocomplete="off" />
+        <el-form-item label="手机" prop="phone" required>
+          <el-input v-model="form.phone" placeholder="手机号" autocomplete="off" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="邮箱（选填）" autocomplete="off" />
+          <el-input v-model="form.email" placeholder="邮箱" autocomplete="off" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="handleRegister" class="submit-btn">

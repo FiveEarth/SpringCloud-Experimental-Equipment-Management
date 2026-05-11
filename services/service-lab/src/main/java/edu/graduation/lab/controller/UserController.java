@@ -28,7 +28,7 @@ public class UserController {
     }
 
     @PostMapping("/lab/batchAdd")
-    @Operation(summary = "批量添加实验室")
+    @Operation(summary = "添加实验室")
     public ResponseEntity<Result<Void>> batchAdd(@RequestBody List<Lab> labs,
                                                  @RequestHeader(value = "X-Roles", required = false) String roles) {
         if (!hasTeacherOrAdmin(roles)) {
@@ -47,6 +47,22 @@ public class UserController {
         }
         labService.deleteLabs(ids);
         return ResponseEntity.ok(Result.success("批量删除实验室成功", null));
+    }
+
+    @PutMapping("/lab/{id}")
+    @Operation(summary = "编辑实验室")
+    public ResponseEntity<Result<Void>> update(@PathVariable("id") Long id,
+                                               @RequestBody Lab lab,
+                                               @RequestHeader(value = "X-Roles", required = false) String roles) {
+        if (!hasTeacherOrAdmin(roles)) {
+            return ResponseEntity.status(403).body(Result.fail(403, "没有权限"));
+        }
+        if (lab == null) {
+            return ResponseEntity.badRequest().body(Result.paramFail("请求体不能为空"));
+        }
+        lab.setId(id);
+        labService.updateLab(lab);
+        return ResponseEntity.ok(Result.success("实验室更新成功", null));
     }
 
     private boolean hasTeacherOrAdmin(String roles) {

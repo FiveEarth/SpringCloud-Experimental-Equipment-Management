@@ -11,12 +11,12 @@
         <span class="filter-tag" :class="{ active: statusFilter === '' }" @click="statusFilter = ''">全部</span>
         <span class="filter-tag" :class="{ active: statusFilter === 'using' }" @click="statusFilter = 'using'">领用中</span>
         <span class="filter-tag" :class="{ active: statusFilter === 'returned' }" @click="statusFilter = 'returned'">已归还</span>
-        <span class="filter-tag" :class="{ active: statusFilter === 'hidden' }" @click="statusFilter = 'hidden'">已隐藏</span>
+        <span class="filter-tag" :class="{ active: statusFilter === 'hidden' }" @click="statusFilter = 'hidden'">逻辑删除</span>
       </div>
     </div>
     <el-card class="list-card" shadow="hover">
       <div class="table-wrap">
-      <el-table :data="filteredList" class="page-table table-hover-actions" border style="width: 100%" empty-text="暂无记录">
+      <el-table :data="filteredList" class="page-table" border style="width: 100%" empty-text="暂无记录">
       <el-table-column prop="equipment_name" label="设备名称" width="140" show-overflow-tooltip />
       <el-table-column label="实例编号" width="140">
         <template #default="{ row }">{{ row.asset_code || '-' }}</template>
@@ -215,11 +215,6 @@ export default {
 .table-wrap { margin-top: 0; }
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: var(--el-table-row-hover-bg-color, #f5f7fa); }
-/* .table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 0;
-  transition: opacity 0.2s;
-} */
-/* .table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) { opacity: 1; } */
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }
 </style>

@@ -1,5 +1,7 @@
 C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\config\DeviceServiceConfig.java
+C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\config\RedisCacheConfig.java
 C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\controller\DeviceController.java
+C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\dao\AssetDao.java
 C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\dao\DeviceDao.java
 C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\DeviceMainApplication.java
 C:\Users\admin\Downloads\Project\cloud-demo\services\service-device\src\main\java\edu\graduation\device\service\DeviceService.java

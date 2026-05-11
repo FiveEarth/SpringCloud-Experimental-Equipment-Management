@@ -14,5 +14,7 @@ public interface LabDao {
     void insertBatch(@Param("list") List<Lab> list);
 
     void deleteBatch(@Param("ids") List<Long> ids);
+
+    int updateOne(Lab lab);
 }
 

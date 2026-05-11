@@ -10,7 +10,7 @@
     </div>
     <el-card class="list-card" shadow="hover">
       <div class="table-wrap">
-      <el-table :data="devices" class="page-table table-hover-actions" border style="width: 100%" @selection-change="selected = $event">
+      <el-table :data="devices" class="page-table" border style="width: 100%" @selection-change="selected = $event">
       <el-table-column type="selection" width="55" />
       <el-table-column prop="deviceId" label="ID" width="80" />
       <el-table-column prop="deviceName" label="名称" width="120" show-overflow-tooltip />
@@ -29,6 +29,7 @@
       </el-table-column>
       <el-table-column label="操作" width="240">
         <template #default="{ row }">
+          <el-button size="small" type="info" @click="openDeviceDetail(row)">详情</el-button>
           <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button size="small" @click="changeStatus(row, 0)">在库</el-button>
           <el-button size="small" @click="changeStatus(row, 2)">故障</el-button>
@@ -42,7 +43,7 @@
     <el-dialog v-model="addVisible" title="新增设备" width="480px">
       <el-form :model="addForm" label-width="100px">
         <el-form-item label="设备编号" required>
-          <el-input v-model="addForm.equipment_code" placeholder="如 EQ-2024001" />
+          <el-input v-model="addForm.equipment_code" placeholder="如 EQ-2026-001" />
         </el-form-item>
         <el-form-item label="设备名称" required>
           <el-input v-model="addForm.equipment_name" placeholder="设备名称" />
@@ -88,7 +89,7 @@
     <el-dialog v-model="editVisible" title="编辑设备" width="520px">
       <el-form :model="editForm" label-width="100px">
         <el-form-item label="设备编号" required>
-          <el-input v-model="editForm.equipmentCode" placeholder="如 EQ-2024001" />
+          <el-input v-model="editForm.equipmentCode" placeholder="如 EQ-2026-001" />
         </el-form-item>
         <el-form-item label="设备名称" required>
           <el-input v-model="editForm.deviceName" placeholder="设备名称" />
@@ -97,7 +98,7 @@
           <el-input v-model="editForm.model" placeholder="型号" />
         </el-form-item>
         <el-form-item label="实验室">
-          <el-select v-model="editForm.labId" placeholder="请选择实验室" style="width: 100%">
+          <el-select v-model="editForm.labId" placeholder="请选择实验室" style="width: 100%" @change="onEditLabChange">
             <el-option v-for="lab in labs" :key="lab.id" :label="lab.labName || lab.lab_name" :value="lab.id" />
           </el-select>
         </el-form-item>
@@ -107,9 +108,9 @@
         <el-form-item label="规格参数">
           <el-input v-model="editForm.specification" type="textarea" :rows="2" placeholder="选填" />
         </el-form-item>
-        <el-form-item label="说明书路径">
+        <!-- <el-form-item label="说明书路径">
           <el-input v-model="editForm.manualUrl" placeholder="如 /upload/manual/xxx.pdf" />
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item label="可借数量" required>
           <el-input-number v-model="editForm.count" :min="0" :max="9999" style="width: 100%" />
         </el-form-item>
@@ -125,6 +126,31 @@
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
         <el-button type="primary" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="detailVisible" title="设备详情" width="520px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="设备编号">{{ detailRow?.equipmentCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备名称">{{ detailRow?.deviceName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="型号">{{ detailRow?.model || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="实验室">{{ detailRow?.labName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="采购日期">{{ detailRow?.purchaseDate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="规格参数">{{ detailRow?.specification || '-' }}</el-descriptions-item>
+        <!-- <el-descriptions-item label="说明书路径">
+          <template v-if="detailRow?.manualUrl">
+            <a :href="detailRow.manualUrl" target="_blank" rel="noreferrer">打开说明书</a>
+          </template>
+          <template v-else>-</template> -->
+        <!-- </el-descriptions-item> -->
+        <el-descriptions-item label="状态">
+          {{ detailRow?.statusText || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="库存数量">{{ detailRow?.count != null ? detailRow.count : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备总数">{{ detailRow?.totalCount != null ? detailRow.totalCount : '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -160,10 +186,12 @@ export default {
         labName: '',
         purchaseDate: '',
         specification: '',
-        manualUrl: '',
+        // manualUrl: '',
         status: 0,
         count: 1
-      }
+      },
+      detailVisible: false,
+      detailRow: null
     }
   },
   created() {
@@ -176,7 +204,7 @@ export default {
         const r = await axios.get('/api/lab/lab/list')
         if (r.data?.code === 200) this.labs = r.data.data || []
       } catch {
-        // 实验室列表加载失败时静默忽略，下拉可为空
+        this.$message.error('加载实验室失败')
       }
     },
     async loadDevices() {
@@ -210,12 +238,20 @@ export default {
         labName: row.labName || '',
         purchaseDate: row.purchaseDate ? (typeof row.purchaseDate === 'string' ? row.purchaseDate : row.purchaseDate) : '',
         specification: row.specification || '',
-        manualUrl: row.manualUrl || '',
+        // manualUrl: row.manualUrl || '',
         status: row.status,
         statusText: row.statusText || '',
         count: row.count != null ? row.count : 1
       }
       this.editVisible = true
+    },
+    onEditLabChange(labId) {
+      const lab = this.labs.find(l => Number(l.id) === Number(labId))
+      this.editForm.labName = lab ? (lab.labName || lab.lab_name || '') : ''
+    },
+    openDeviceDetail(row) {
+      this.detailRow = { ...(row || {}) }
+      this.detailVisible = true
     },
     async submitEdit() {
       if (!this.editForm.equipmentCode || !this.editForm.deviceName) {
@@ -223,6 +259,11 @@ export default {
         return
       }
       try {
+        // 保存时同步实验室名称，避免只改 labId 导致 labName 不更新
+        const lab = this.labs.find(l => Number(l.id) === Number(this.editForm.labId))
+        if (lab) {
+          this.editForm.labName = lab.labName || lab.lab_name || ''
+        }
         await axios.put(`/api/device/equipment/${this.editForm.deviceId}`, this.editForm)
         this.$message.success('保存成功')
         this.editVisible = false
@@ -299,11 +340,6 @@ export default {
 .table-wrap { margin-top: 0; }
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: var(--el-table-row-hover-bg-color, #f5f7fa); }
-.table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) { opacity: 1; }
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }
 </style>

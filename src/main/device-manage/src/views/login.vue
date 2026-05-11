@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <el-card class="login-card">
-      <h2 class="title">实验工具管理平台</h2>
+      <h2 class="title">实验设备管理平台</h2>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" />

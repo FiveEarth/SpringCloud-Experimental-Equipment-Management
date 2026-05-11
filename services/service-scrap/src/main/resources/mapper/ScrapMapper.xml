@@ -21,8 +21,8 @@
     </resultMap>
 
     <insert id="insert" parameterType="edu.graduation.scrap.bean.Scrap" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO lab_equipment_scrap (equipment_id, equipment_name, scrap_reason, residual_value, apply_user_id, apply_user_name, approval_status)
-        VALUES (#{equipmentId}, #{equipmentName}, #{scrapReason}, #{residualValue}, #{applyUserId}, #{applyUserName}, COALESCE(#{approvalStatus}, 0))
+        INSERT INTO lab_equipment_scrap (equipment_id, asset_id, equipment_name, scrap_reason, residual_value, apply_user_id, apply_user_name, approval_status)
+        VALUES (#{equipmentId}, #{assetId}, #{equipmentName}, #{scrapReason}, #{residualValue}, #{applyUserId}, #{applyUserName}, COALESCE(#{approvalStatus}, 0))
     </insert>
 
     <select id="selectById" resultMap="ScrapResult">
@@ -37,13 +37,25 @@
         SELECT * FROM lab_equipment_scrap ORDER BY create_time DESC
     </select>
 
+    <select id="listFiltered" resultMap="ScrapResult">
+        SELECT * FROM lab_equipment_scrap
+        <where>
+            <if test="approvalStatus != null">
+                approval_status = #{approvalStatus}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
     <update id="update" parameterType="edu.graduation.scrap.bean.Scrap">
         UPDATE lab_equipment_scrap
         <set>
             <if test="approvalUserId != null">approval_user_id = #{approvalUserId},</if>
+            <if test="approvalUserName != null and approvalUserName != ''">approval_user_name = #{approvalUserName},</if>
             <if test="approvalStatus != null">approval_status = #{approvalStatus},</if>
             <if test="disposalMethod != null">disposal_method = #{disposalMethod},</if>
             <if test="disposalTime != null">disposal_time = #{disposalTime},</if>
+            <if test="residualValue != null">residual_value = #{residualValue},</if>
         </set>
         WHERE id = #{id}
     </update>

@@ -2,7 +2,7 @@
   <div class="page">
     <header class="page-header">
       <h2 class="page-title">报废审批</h2>
-      <p class="page-desc">审批设备报废申请，通过后设备状态将更新为已报废。</p>
+      <p class="page-desc">审批设备报废申请。若记录含<strong>实例ID</strong>，通过后仅该台设备报废且类型库存减一；历史无实例记录则整类型标记为已报废。</p>
     </header>
     <div class="page-filter">
       <el-button type="primary" size="default" @click="load">刷新</el-button>
@@ -14,7 +14,7 @@
     </div>
     <el-card class="list-card" shadow="hover">
       <div class="table-wrap">
-      <el-table :data="list" class="page-table table-hover-actions" border style="width: 100%" empty-text="暂无报废记录">
+      <el-table :data="list" class="page-table" border style="width: 100%" empty-text="暂无报废记录">
       <el-table-column prop="id" label="ID" width="72" align="center" />
       <el-table-column prop="equipmentName" label="设备名称" width="140" show-overflow-tooltip />
       <el-table-column prop="equipmentId" label="设备ID" width="90" align="center" />
@@ -56,8 +56,16 @@
     </el-table>
       </div>
     </el-card>
-    <el-dialog v-model="disposalVisible" title="通过报废（选填处置方式）" width="400px">
-      <el-input v-model="disposalMethod" placeholder="如：回收处理、销毁" />
+    <el-dialog v-model="disposalVisible" title="通过报废" width="440px">
+      <el-form label-width="100px">
+        <el-form-item label="核定残值(元)">
+          <el-input-number v-model="approveResidualValue" :min="0" :precision="2" :step="100" style="width:100%" />
+          <div class="form-hint">可修改申请人填写的残值，确定后写入报废记录</div>
+        </el-form-item>
+        <el-form-item label="处置方式">
+          <el-input v-model="disposalMethod" placeholder="选填，如：回收处理、销毁" />
+        </el-form-item>
+      </el-form>
       <template #footer>
         <el-button @click="disposalVisible = false">取消</el-button>
         <el-button type="primary" @click="submitApprove(1)">确定通过</el-button>
@@ -104,6 +112,9 @@ export default {
       this.approveStatus = status
       if (status === 1) {
         this.disposalMethod = ''
+        const rv = row.residualValue
+        this.approveResidualValue = rv != null && rv !== '' ? Number(rv) : 0
+        if (Number.isNaN(this.approveResidualValue)) this.approveResidualValue = 0
         this.disposalVisible = true
       } else {
         this.submitApprove(2)
@@ -111,11 +122,15 @@ export default {
     },
     async submitApprove(status) {
       try {
-        await axios.post(`/api/scrap/scraps/${this.approveRow.id}/approve`, {
+        const body = {
           status,
-          disposalMethod: status === 1 ? this.disposalMethod : null
-        })
-        this.$message.success(status === 1 ? '已通过，设备已报废' : '已驳回')
+          disposalMethod: status === 1 ? (this.disposalMethod || null) : null
+        }
+        if (status === 1) {
+          body.residualValue = this.approveResidualValue
+        }
+        await axios.post(`/api/scrap/scraps/${this.approveRow.id}/approve`, body)
+        this.$message.success(status === 1 ? '已通过，已按记录更新设备/实例状态' : '已驳回')
         this.disposalVisible = false
         this.load()
       } catch (e) {
@@ -158,11 +173,7 @@ export default {
 .table-wrap { margin-top: 0; }
 .page-table :deep(.el-table__body tr) { transition: background-color 0.15s; }
 .page-table :deep(.el-table__body tr:hover) { background-color: var(--el-table-row-hover-bg-color, #f5f7fa); }
-/* .table-hover-actions :deep(.el-table__body .el-table__cell:last-child .cell) {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.table-hover-actions :deep(.el-table__body tr:hover .el-table__cell:last-child .cell) { opacity: 1; } */
 .list-card { margin-top: 0; }
 .list-card :deep(.el-card__body) { padding: 16px; }
+.form-hint { font-size: 12px; color: #909399; line-height: 1.4; margin-top: 4px; }
 </style>

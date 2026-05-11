@@ -1,8 +1,12 @@
 package edu.graduation.maintain.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.graduation.common.Result;
 import edu.graduation.maintain.bean.Maintain;
 import edu.graduation.maintain.dao.MaintainDao;
 import edu.graduation.maintain.service.MaintainService;
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +33,9 @@ public class MaintainServiceImpl implements MaintainService {
         }
         if (maintain.getMaintainContent() == null || maintain.getMaintainContent().trim().isEmpty()) {
             throw new IllegalArgumentException("创建维护记录失败：维护/维修内容不能为空");
+        }
+        if (maintain.getMaintainType() != null && maintain.getMaintainType() == 1 && maintain.getAssetId() == null) {
+            throw new IllegalArgumentException("创建维护记录失败：维修类须指定设备实例 assetId（请从领用记录发起报修）");
         }
         if (maintain.getProgressStatus() == null) {
             maintain.setProgressStatus(0);
@@ -62,6 +69,11 @@ public class MaintainServiceImpl implements MaintainService {
     @Override
     public List<Maintain> queryByApplyUserId(Long applyUserId) {
         return maintainDao.queryByApplyUserId(applyUserId);
+    }
+
+    @Override
+    public List<Maintain> queryByApplyUserIdVisible(Long applyUserId) {
+        return maintainDao.queryByApplyUserIdVisible(applyUserId);
     }
 
     @Override
@@ -147,6 +159,50 @@ public class MaintainServiceImpl implements MaintainService {
     }
 
     @Override
+    public void applicantRevokePending(Long maintainId, Long applicantUserId) {
+        if (maintainId == null || applicantUserId == null || applicantUserId <= 0) {
+            throw new IllegalArgumentException("参数无效");
+        }
+        Maintain m = maintainDao.selectById(maintainId);
+        if (m == null) {
+            throw new IllegalArgumentException("维修记录不存在");
+        }
+        if (!applicantUserId.equals(m.getApplyUserId())) {
+            throw new IllegalArgumentException("无权操作该维修单");
+        }
+        int n = maintainDao.applicantSoftHideRevoke(maintainId, applicantUserId);
+        if (n == 0) {
+            throw new IllegalArgumentException("仅「待处理且未接单」的维修单可撤销");
+        }
+        if (m.getAssetId() != null && deviceFeignClient != null) {
+            try {
+                deviceFeignClient.setAssetStatus(m.getAssetId(), 0);
+                log.info("申请人撤销维修单，实例恢复在库 assetId={}", m.getAssetId());
+            } catch (Exception e) {
+                log.warn("撤销后更新实例状态失败", e);
+            }
+        }
+    }
+
+    @Override
+    public void applicantSoftHideCompleted(Long maintainId, Long applicantUserId) {
+        if (maintainId == null || applicantUserId == null || applicantUserId <= 0) {
+            throw new IllegalArgumentException("参数无效");
+        }
+        Maintain m = maintainDao.selectById(maintainId);
+        if (m == null) {
+            throw new IllegalArgumentException("维修记录不存在");
+        }
+        if (!applicantUserId.equals(m.getApplyUserId())) {
+            throw new IllegalArgumentException("无权操作该维修单");
+        }
+        int n = maintainDao.applicantSoftHideCompleted(maintainId, applicantUserId);
+        if (n == 0) {
+            throw new IllegalArgumentException("仅「已完成」的维修单可从我的列表中隐藏");
+        }
+    }
+
+    @Override
     public void restoreMaintain(Long id) {
         if (id == null) throw new IllegalArgumentException("id 为空");
         Maintain m = maintainDao.selectById(id);
@@ -155,27 +211,89 @@ public class MaintainServiceImpl implements MaintainService {
         if (m.getOriginalStatus() == null) throw new IllegalArgumentException("无法恢复：缺少原始状态");
         int n = maintainDao.restoreMaintain(id);
         if (n == 0) throw new IllegalStateException("恢复失败");
+        Maintain after = maintainDao.selectById(id);
+        if (after != null && after.getProgressStatus() != null && after.getProgressStatus() == 0
+                && after.getAssetId() != null && deviceFeignClient != null) {
+            try {
+                deviceFeignClient.setAssetStatus(after.getAssetId(), 2);
+                log.info("恢复隐藏维修单，实例重新标记维修中 assetId={}", after.getAssetId());
+            } catch (Exception e) {
+                log.warn("恢复后更新实例状态失败", e);
+            }
+        }
     }
 
     @Autowired(required = false)
     private edu.graduation.maintain.feign.DeviceFeignClient deviceFeignClient;
     @Autowired(required = false)
     private edu.graduation.maintain.feign.ScrapFeignClient scrapFeignClient;
+    @Autowired(required = false)
+    private ObjectMapper objectMapper;
 
     @Override
-    public void completeRepair(Long maintainId, Boolean success, java.math.BigDecimal cost, String maintainContent) {
+    public void completeRepair(Long maintainId, Boolean success, java.math.BigDecimal cost, String maintainContent,
+                               java.math.BigDecimal scrapResidualValue) {
         Maintain maintain = maintainDao.selectById(maintainId);
         if (maintain == null) {
             throw new IllegalArgumentException("维护记录不存在");
         }
+        if (success == null || (!Boolean.TRUE.equals(success) && !Boolean.FALSE.equals(success))) {
+            throw new IllegalArgumentException("参数 success 须为 true 或 false");
+        }
+        Long equipmentId = maintain.getEquipmentId();
+        Long assetId = maintain.getAssetId();
+
+        // 先处理「无法修复」：报废单创建成功后再完结工单，避免工单已完结但报废未提交
+        if (Boolean.FALSE.equals(success)) {
+            if (maintain.getMaintainType() == null || maintain.getMaintainType() != 1) {
+                throw new IllegalArgumentException("仅维修类工单支持「无法修复」转报废");
+            }
+            if (assetId == null) {
+                throw new IllegalArgumentException("该维修单未关联设备实例，无法提交报废申请（请从领用记录发起报修）");
+            }
+            if (equipmentId == null) {
+                throw new IllegalArgumentException("该维修单缺少设备类型信息，无法提交报废申请");
+            }
+            if (scrapFeignClient == null) {
+                throw new IllegalArgumentException("报废服务不可用，请稍后重试");
+            }
+            edu.graduation.scrap.bean.Scrap scrap = new edu.graduation.scrap.bean.Scrap();
+            scrap.setEquipmentId(equipmentId);
+            scrap.setAssetId(assetId);
+            scrap.setEquipmentName(maintain.getEquipmentName());
+            scrap.setScrapReason(maintainContent != null && !maintainContent.isEmpty() ? maintainContent : "维修无法修复，转报废");
+            scrap.setResidualValue(scrapResidualValue != null ? scrapResidualValue : java.math.BigDecimal.ZERO);
+            scrap.setApplyUserId(maintain.getAssignUserId() != null ? maintain.getAssignUserId() : maintain.getApplyUserId());
+            scrap.setApplyUserName(maintain.getAssignUserName() != null ? maintain.getAssignUserName() : maintain.getApplyUserName());
+            scrap.setApprovalStatus(0);
+            try {
+                Result<Long> createResult = scrapFeignClient.createScrap(scrap);
+                if (createResult == null || createResult.getCode() == null || createResult.getCode() != 200 || createResult.getData() == null) {
+                    throw new IllegalArgumentException("提交报废申请失败：" + (createResult != null ? createResult.getMsg() : "服务无响应"));
+                }
+            } catch (IllegalArgumentException e) {
+                throw e;
+            } catch (FeignException e) {
+                String serverMsg = extractMsgFromFeignBody(e.contentUTF8());
+                if (e.status() >= 400 && e.status() < 500) {
+                    throw new IllegalArgumentException(
+                            serverMsg != null && !serverMsg.isBlank() ? serverMsg : "提交报废申请失败（" + e.status() + "）");
+                }
+                log.error("提交报废申请失败", e);
+                throw new IllegalArgumentException("维修完成失败：无法修复记录未成功转报废，请稍后重试");
+            } catch (Exception e) {
+                log.error("提交报废申请失败", e);
+                throw new IllegalArgumentException("维修完成失败：无法修复记录未成功转报废，请稍后重试");
+            }
+        }
+
         maintain.setId(maintainId);
         maintain.setProgressStatus(2);
         maintain.setCost(cost);
         maintain.setMaintainContent(maintainContent != null ? maintainContent : maintain.getMaintainContent());
         maintain.setMaintainTime(new java.sql.Timestamp(System.currentTimeMillis()));
         maintainDao.modify(maintain);
-        Long equipmentId = maintain.getEquipmentId();
-        Long assetId = maintain.getAssetId();
+
         if (Boolean.TRUE.equals(success)) {
             if (assetId != null && deviceFeignClient != null) {
                 try {
@@ -196,21 +314,21 @@ public class MaintainServiceImpl implements MaintainService {
                     log.warn("更新设备状态/加回库存失败", e);
                 }
             }
-        } else {
-            if ((equipmentId != null || assetId != null) && scrapFeignClient != null) {
-                try {
-                    edu.graduation.scrap.bean.Scrap scrap = new edu.graduation.scrap.bean.Scrap();
-                    scrap.setEquipmentId(equipmentId);
-                    scrap.setAssetId(assetId);
-                    scrap.setScrapReason(maintainContent != null && !maintainContent.isEmpty() ? maintainContent : "维修无法修复，转报废");
-                    scrap.setResidualValue(java.math.BigDecimal.ZERO);
-                    scrap.setApplyUserId(maintain.getAssignUserId() != null ? maintain.getAssignUserId() : maintain.getApplyUserId());
-                    scrap.setApprovalStatus(0);
-                    scrapFeignClient.createScrap(scrap);
-                } catch (Exception e) {
-                    log.warn("提交报废申请失败", e);
-                }
-            }
         }
+    }
+
+    private String extractMsgFromFeignBody(String body) {
+        if (body == null || body.isBlank() || objectMapper == null) {
+            return "";
+        }
+        try {
+            JsonNode n = objectMapper.readTree(body);
+            if (n.has("msg") && !n.get("msg").isNull()) {
+                return n.get("msg").asText("");
+            }
+        } catch (Exception ignored) {
+            // ignore
+        }
+        return "";
     }
 }

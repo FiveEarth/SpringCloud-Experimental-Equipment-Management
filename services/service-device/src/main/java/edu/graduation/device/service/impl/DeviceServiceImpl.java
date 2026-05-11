@@ -7,6 +7,8 @@ import edu.graduation.device.dao.DeviceDao;
 import edu.graduation.device.service.DeviceService;
 import edu.graduation.reserve.bean.Equipment;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +24,7 @@ public class DeviceServiceImpl implements DeviceService {
     private AssetDao assetDao;
 
     @Override
+    @Cacheable(cacheNames = "device:detail", key = "#deviceId", unless = "#result == null")
     public Device getDeviceById(Long deviceId) {
         List<Device> list = deviceDao.getDevices();
         if (list == null) return null;
@@ -29,16 +32,19 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @Cacheable(cacheNames = "device:list", key = "'all'")
     public List<Device> getDevices() {
         return deviceDao.getDevices();
     }
 
     @Override
+    @Cacheable(cacheNames = "device:list", key = "'borrowable'")
     public List<Device> getDevicesBorrowable() {
         return deviceDao.getDevicesBorrowable();
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void addEquipments(List<Equipment> list) {
         if (list == null || list.isEmpty()) {
             return;
@@ -68,6 +74,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void deleteEquipments(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -94,6 +101,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void changeEquipmentStatus(Long id, Integer status) {
         if (id == null || status == null) {
             return;
@@ -102,6 +110,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void updateEquipmentCount(Long id, int delta) {
         if (id == null) {
             return;
@@ -116,6 +125,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void updateEquipment(Device device) {
         if (device == null || device.getDeviceId() <= 0) {
             return;
@@ -124,6 +134,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public Long allocateAsset(Long equipmentId) {
         if (equipmentId == null) {
             throw new IllegalArgumentException("equipmentId 不能为空");
@@ -137,12 +148,14 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void releaseAsset(Long assetId) {
         if (assetId == null) return;
         assetDao.updateStatus(assetId, 0);
     }
 
     @Override
+    @CacheEvict(cacheNames = {"device:list", "device:detail"}, allEntries = true)
     public void updateAssetStatus(Long assetId, Integer status) {
         if (assetId == null || status == null) return;
         assetDao.updateStatus(assetId, status);

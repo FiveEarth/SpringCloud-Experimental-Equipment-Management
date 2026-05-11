@@ -17,5 +17,7 @@ public interface ScrapDao {
 
     List<Scrap> listAll();
 
+    List<Scrap> listFiltered(@Param("approvalStatus") Integer approvalStatus);
+
     int update(Scrap scrap);
 }

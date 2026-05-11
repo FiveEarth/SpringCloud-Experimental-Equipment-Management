@@ -47,12 +47,20 @@
         SELECT * FROM lab_equipment_maintain WHERE apply_user_id = #{applyUserId}
     </select>
 
+    <select id="queryByApplyUserIdVisible" resultMap="MaintainResult">
+        SELECT * FROM lab_equipment_maintain
+        WHERE apply_user_id = #{applyUserId} AND (progress_status IS NULL OR progress_status != 4)
+        ORDER BY create_time DESC
+    </select>
+
     <select id="queryPending" resultMap="MaintainResult">
         SELECT * FROM lab_equipment_maintain WHERE progress_status = 0
     </select>
 
     <select id="queryPendingAndInProgress" resultMap="MaintainResult">
-        SELECT * FROM lab_equipment_maintain WHERE progress_status IN (0, 1) ORDER BY progress_status ASC, create_time DESC
+        SELECT * FROM lab_equipment_maintain
+        WHERE progress_status IN (0, 1, 2, 4)
+        ORDER BY progress_status ASC, create_time DESC
     </select>
 
     <select id="queryPendingOverdue24h" resultMap="MaintainResult">
@@ -92,6 +100,20 @@
 
     <update id="restoreMaintain">
         UPDATE lab_equipment_maintain SET progress_status = original_status WHERE id = #{id} AND progress_status = 4 AND original_status IS NOT NULL
+    </update>
+
+    <update id="applicantSoftHideRevoke">
+        UPDATE lab_equipment_maintain
+        SET progress_status = 4, original_status = 0
+        WHERE id = #{id} AND apply_user_id = #{applyUserId}
+          AND progress_status = 0 AND assign_user_id IS NULL
+    </update>
+
+    <update id="applicantSoftHideCompleted">
+        UPDATE lab_equipment_maintain
+        SET progress_status = 4, original_status = 2
+        WHERE id = #{id} AND apply_user_id = #{applyUserId}
+          AND progress_status = 2
     </update>
 
 </mapper>

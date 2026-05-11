@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <header class="page-header">
-      <h2 class="page-title">可借用设备</h2>
+      <h2 class="page-title">设备列表</h2>
       <p class="page-desc">仅显示在库且可借数量大于 0 的设备；领用审批通过后数量将扣减，归还确认后加回。</p>
     </header>
     <div class="page-filter">
@@ -27,9 +27,37 @@
           <el-tag v-else type="info">{{ row.statusText || '已报废' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="操作" width="160">
+        <template #default="{ row }">
+          <el-button size="small" type="info" @click="openDeviceDetail(row)">详情</el-button>
+        </template>
+      </el-table-column>
     </el-table>
       </div>
     </el-card>
+
+    <el-dialog v-model="detailVisible" title="设备详情" width="520px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="设备编号">{{ detailRow?.equipmentCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备名称">{{ detailRow?.deviceName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="型号">{{ detailRow?.model || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="实验室">{{ detailRow?.labName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="采购日期">{{ detailRow?.purchaseDate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="规格参数">{{ detailRow?.specification || '-' }}</el-descriptions-item>
+        <!-- <el-descriptions-item label="说明书路径"> -->
+          <!-- <template v-if="detailRow?.manualUrl">
+            <a :href="detailRow.manualUrl" target="_blank" rel="noreferrer">打开说明书</a>
+          </template>
+          <template v-else>-</template>
+        </el-descriptions-item> -->
+        <el-descriptions-item label="状态">{{ detailRow?.statusText || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="可借数量">{{ detailRow?.count != null ? detailRow.count : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="设备总数">{{ detailRow?.totalCount != null ? detailRow.totalCount : '-' }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -40,7 +68,9 @@ export default {
   name: 'DeviceList',
   data() {
     return {
-      devices: []
+      devices: [],
+      detailVisible: false,
+      detailRow: null
     }
   },
   created() {
@@ -58,6 +88,10 @@ export default {
       } catch (e) {
         this.$message.error('加载设备失败')
       }
+    },
+    openDeviceDetail(row) {
+      this.detailRow = { ...(row || {}) }
+      this.detailVisible = true
     }
   }
 }
