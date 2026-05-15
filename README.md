@@ -1,56 +1,96 @@
-# 实验室设备一体化管理系统
-基于 Spring Cloud 微服务架构的实验室全业务管理平台，实现**设备管理、预约、申领、维修、报废、实验室资源**一体化管控，满足软件工程专业本科毕业设计要求，适配普通高校计算机专业毕设答辩与验收标准。
+实验室设备一体化管理系统（Spring Cloud + Vue）
 
-## 一、项目技术栈
-### 后端技术
-- 基础框架：Java 17 + Spring Boot 3 + Spring Cloud Alibaba
-- 微服务组件：Nacos（服务发现/配置中心）、Sentinel（流量防护）
-- 网关与鉴权：Spring Cloud Gateway + JWT 全局鉴权，请求头传递用户身份、角色、权限
-- 服务通信：OpenFeign 微服务远程调用
-- 缓存优化：Redis 集成设备服务，减轻数据库压力
-- 部署模式：各业务域独立微服务部署
+## 项目概述
+面向高校实验室场景的设备管理平台，基于 Spring Cloud 微服务与 Vue 3 SPA。覆盖设备台账、预约、申领/归还审批、维修、报废与实验室资源管理，并提供角色权限控制（管理员/教师/学生/维修）。
 
-### 前端技术
-- 框架：Vue 3 + Element Plus
-- 架构：单页应用（SPA）
-- 权限设计：按角色（管理员/教师/学生/维修人员）划分路由与功能模块
-- 核心页面：审批管理、数据统计、设备台账、维修工单等
+## 架构说明
+- Spring Cloud Gateway：统一入口与路由
+- Nacos：服务注册与配置中心
+- Sentinel：流量防护（可选 Dashboard）
+- OpenFeign：服务间调用
+- MyBatis + MySQL：数据持久化
+- Redis：缓存与加速（在 `service-device` 中配置）
 
-## 二、项目说明（毕业设计相关）
-1. **项目定位**：本项目为本科毕业设计作品，核心目标满足毕业答辩要求，可正常演示、验收，符合普通高校计算机专业毕设标准。
-2. **已知设计问题（设备粒度）**
-   项目开发阶段因实习时间紧张、导师建议优先聚焦论文格式与文字描述，遗留设备粒度相关设计缺陷，**不影响答辩演示**，具体问题如下：
-   - 设备唯一ID分配不合理：管理员新增设备时未统一分配唯一ID，仅在学生预约时按自增ID顺序分配首个设备ID；
-   - 资源预约无数量限制：多人同时预约同一种设备时，系统不校验库存，统一生成审批单，由教师/管理员手动审批通过，未实现预约即预留资源、超时自动释放机制；
-   - 时间冲突无校验：未实现「同一设备、同一天、时段重叠」的互斥校验；
-   - 重复预约无拦截：无后端防重复提交逻辑，同一用户可重复预约同一时段；
-   - 补充说明：上述问题为企业级生产环境部署优化点，**毕业设计答辩、验收无影响**。
+## 模块划分
+### 后端（Maven 多模块）
+- `gateway`（默认 8888）：API 网关与路由
+- `services`（业务服务）
+  - `service-user`（8001）
+  - `service-apply`（8002）
+  - `service-maintain`（8003）
+  - `service-lab`（8004）
+  - `service-device`（8005）
+  - `service-scrap`（8006）
+  - `service-reserve`（8007）
+- `model`：公共实体与依赖
 
-## 三、项目启动说明
-### 1. 数据库初始化
-执行项目根目录下 `gra.sql` 脚本，完成数据库表结构与基础数据初始化。
+### 前端
+- `device-manage`：Vue 3 + Element Plus（开发端口默认 8081）
 
-### 2. Sentinel 控制台启动
-1. 将 `sentinel-dashboard-1.8.8.jar` 放置自定义目录；
-2. 执行启动命令：
+## 网关路由
+配置文件：`gateway/src/main/resources/application-route.yml`
+- `/api/user/**` -> `service-user`
+- `/api/apply/**` -> `service-apply`
+- `/api/maintain/**` -> `service-maintain`
+- `/api/lab/**` -> `service-lab`
+- `/api/device/**` -> `service-device`
+- `/api/scrap/**` -> `service-scrap`
+- `/api/reserve/**` -> `service-reserve`
+
+## 环境要求
+- JDK 17
+- Maven 3.8+
+- Node.js 16+
+- MySQL 5.7+（默认库名 `gra`）
+- Redis 6+
+- Nacos 2.x（注册/配置中心）
+- Sentinel Dashboard（可选）
+
+## 配置位置
+- 服务配置：`services/*/src/main/resources/application.yml`
+- 网关配置：`gateway/src/main/resources/application.yml`
+- 前端代理：`device-manage/vue.config.js`（或 `VUE_APP_API_TARGET`）
+- 数据库脚本：`gra.sql`
+
+## 数据库初始化
+导入 `gra.sql` 创建表结构与基础数据。
+
+## 启动顺序（建议）
+1) 启动 MySQL、Redis、Nacos
+2)（可选）启动 Sentinel Dashboard
+3) 启动各业务服务
+4) 启动网关
+5) 启动前端
+
+## 常用命令
+后端（示例：启动用户服务）：
+```bash
+mvn -pl services/service-user -am spring-boot:run
+```
+
+网关：
+```bash
+mvn -pl gateway -am spring-boot:run
+```
+
+Sentinel 控制台：
 ```bash
 java -jar sentinel-dashboard-1.8.8.jar
 ```
-3. 访问地址：http://localhost:8080
-4. 默认账号/密码：sentinel / sentinel
-5. 端口可根据需求自行修改配置
 
-### 3. 前端项目启动
-前端项目目录：`device-manage`
-1. 安装依赖：
+前端：
 ```bash
+cd device-manage
 npm install
+npm run serve
 ```
-2. 启动项目：
-```bash
-npm run dev
-```
-3. 默认端口可自行配置修改
 
----
+## 备注
+- 各服务配置中的 Nacos/数据库地址为示例，需根据环境调整。
+- 项目定位为毕业设计/演示场景，生产级约束（如预约冲突、库存预留、幂等控制）可进一步完善。
 
+## 许可证
+All will be allowing.
+
+## 致谢
+Spring Cloud、Nacos、Sentinel、Vue、Element Plus。
