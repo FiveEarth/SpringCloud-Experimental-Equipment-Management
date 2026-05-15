@@ -28,8 +28,6 @@
 2. Sentinel 控制台启动
    将 sentinel-dashboard-1.8.8.jar 放置自定义目录；
    执行启动命令：
-   bash
-   运行
    java -jar sentinel-dashboard-1.8.8.jar
    访问地址：http://localhost:8080
    默认账号 / 密码：sentinel /sentinel
@@ -37,11 +35,7 @@
 3. 前端项目启动
    前端项目目录：device-manage
    安装依赖：
-   bash
-   运行
    npm install
    启动项目：
-   bash
-   运行
    npm run dev
    默认端口可自行配置修改
